@@ -4,6 +4,8 @@ import time
 
 import torch
 import torchvision.models.detection.mask_rcnn
+from tqdm import tqdm
+
 import utils
 from coco_eval import CocoEvaluator
 from coco_utils import get_coco_api_from_dataset
@@ -83,9 +85,11 @@ def evaluate(model, data_loader, device):
     header = "Test:"
 
     coco = get_coco_api_from_dataset(data_loader.dataset)
+    print("Getting IOU types...")
     iou_types = _get_iou_types(model)
     coco_evaluator = CocoEvaluator(coco, iou_types)
-
+    pbar = tqdm(total=len(data_loader), leave=True, position=0)
+    print("Running validation...")
     for images, targets in metric_logger.log_every(data_loader, 100, header):
         images = list(img.to(device) for img in images)
 
@@ -102,6 +106,7 @@ def evaluate(model, data_loader, device):
         coco_evaluator.update(res)
         evaluator_time = time.time() - evaluator_time
         metric_logger.update(model_time=model_time, evaluator_time=evaluator_time)
+        pbar.update(1)
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()

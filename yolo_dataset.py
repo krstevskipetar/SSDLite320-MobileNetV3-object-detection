@@ -32,50 +32,6 @@ def scale_bbox(bbox: Sequence[int], image_width: int, image_height: int):
 resize = torchvision.transforms.Resize((640, 640), antialias=True)
 
 
-def normalized_to_absolute(bbox, image_width, image_height):
-    """
-    Convert normalized bounding box coordinates to absolute coordinates.
-
-    Parameters:
-    - bbox: Tuple (x, y, w, h) representing normalized coordinates.
-    - image_width: Width of the image.
-    - image_height: Height of the image.
-
-    Returns:
-    - Tuple (x_min, y_min, x_max, y_max) representing absolute coordinates.
-    """
-    x, y, w, h = bbox
-    x_min = int(x * image_width)
-    y_min = int(y * image_height)
-    x_max = int((x + w) * image_width)
-    y_max = int((y + h) * image_height)
-    return x_min, y_min, x_max, y_max
-
-
-def resize_bbox(bbox, original_size, new_size):
-    """
-    Resize bounding box coordinates to a new image size.
-
-    Parameters:
-    - bbox: Tuple (x_min, y_min, x_max, y_max) representing absolute coordinates.
-    - original_size: Tuple (original_width, original_height) representing the original image size.
-    - new_size: Tuple (new_width, new_height) representing the new image size.
-
-    Returns:
-    - Tuple (resized_x_min, resized_y_min, resized_x_max, resized_y_max) representing resized coordinates.
-    """
-    x_min, y_min, x_max, y_max = bbox
-    original_width, original_height = original_size
-    new_width, new_height = new_size
-
-    resized_x_min = int(x_min * (new_width / original_width))
-    resized_y_min = int(y_min * (new_height / original_height))
-    resized_x_max = int(x_max * (new_width / original_width))
-    resized_y_max = int(y_max * (new_height / original_height))
-
-    return resized_x_min, resized_y_min, resized_x_max, resized_y_max
-
-
 class YOLODataset(torch.utils.data.Dataset):
 
     # todo: add input validation
@@ -89,10 +45,11 @@ class YOLODataset(torch.utils.data.Dataset):
         self.image_files = os.listdir(image_path)
         if shuffle:
             random.shuffle(self.image_files)
-        self.ids = [i for i in range(len(os.listdir(image_path)))]
 
         self.annotation_files = [''.join(img.split('.')[:-1]) + '.txt' for img in self.image_files]
         self._validate_input()
+        self.ids = [i for i in range(len(self.image_files))]
+
         with open(label_file, 'r') as f:
             classes = f.readlines()
             classes = [c.strip() for c in classes]
@@ -134,7 +91,7 @@ class YOLODataset(torch.utils.data.Dataset):
         image_id = self.ids[index]
         boxes, labels = self._get_annotation(image_id)
         image = read_image(os.path.join(self.image_path, self.image_files[image_id]))
-
+        image = image.float()
         if image.shape[0] > 3:
             image = image[:3, :, :]
         height, width = image.size()[1:3]
@@ -154,7 +111,8 @@ class YOLODataset(torch.utils.data.Dataset):
                                                     canvas_size=F.get_size(image)),
                   "labels": labels,
                   "area": area,
-                  "iscrowd": iscrowd}
+                  "iscrowd": iscrowd,
+                  "image_id": image_id}
         return image, target
 
     def __len__(self):
