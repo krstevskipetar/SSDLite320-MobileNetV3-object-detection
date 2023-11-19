@@ -30,10 +30,10 @@ dataset = YOLODataset(image_path=args.image_path,
                       label_file=args.label_file,
                       shuffle=args.shuffle)
 
-dataset_val = YOLODataset(image_path=args.image_path,
-                      annotation_path=args.annotation_path,
-                      label_file=args.label_file,
-                      shuffle=args.shuffle)
+dataset_val = YOLODataset(image_path=args.image_path_val,
+                          annotation_path=args.annotation_path_val,
+                          label_file=args.label_file,
+                          shuffle=args.shuffle)
 
 data_loader = torch.utils.data.DataLoader(
     dataset,
@@ -54,9 +54,6 @@ data_loader_val = torch.utils.data.DataLoader(
 
 model = get_model()
 
-
-
-
 # construct an optimizer
 params = [p for p in model.parameters() if p.requires_grad]
 optimizer = torch.optim.SGD(
@@ -75,11 +72,14 @@ lr_scheduler = torch.optim.lr_scheduler.StepLR(
 
 # let's train it for 5 epochs
 num_epochs = 5
-
+def train_epoch():
+    pass
+def validate(model, val_loader):
+    pass
 for epoch in range(num_epochs):
     # train for one epoch, printing every 10 iterations
     model.train()
-    loss_value=0
+    loss_value = 0
     for idx, (images, targets) in tqdm(enumerate(data_loader), total=len(data_loader)):
         images = list(image for image in images)
         output = model(images, targets)  # Returns losses and detections
@@ -109,8 +109,9 @@ for epoch in range(num_epochs):
         'loss': loss_value,
     }, 'checkpoints')
 
-
 print("That's it!")
+
+
 def main():
     pass
 
