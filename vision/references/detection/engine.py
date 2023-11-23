@@ -149,3 +149,8 @@ def evaluate(model, data_loader, device, coco):
     coco_evaluator.summarize()
     torch.set_num_threads(n_threads)
     return coco_evaluator
+
+
+def validate(model, data_loader, device):  # todo: implement custom validation function
+    loss, accuracy = 0, 0
+    return loss, accuracy
