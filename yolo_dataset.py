@@ -16,34 +16,7 @@ random.seed(42)
 np.random.seed(42)
 
 
-def yolobbox2bbox(bbox: Sequence[int]):
-    x, y, w, h = bbox
-    x1, y1 = x - w / 2, y - h / 2
-    x2, y2 = x + w / 2, y + h / 2
-    return int(x1), int(y1), int(x2), int(y2)
-
-
-def scale_bbox(bbox: Sequence[int], image_width: int, image_height: int):
-    x, y, w, h = bbox
-    x *= image_width
-    w *= image_width
-    y *= image_height
-    h *= image_height
-    return x, y, w, h
-
-
-def resize_bbox(bbox: Sequence[int], x_factor, y_factor):
-    x1, y1, x2, y2 = bbox
-    x1 *= x_factor
-    x2 *= x_factor
-    y1 *= y_factor
-    y2 *= y_factor
-    return x1, y1, x2, y2
-
-
 class YOLODataset(torch.utils.data.Dataset):
-
-    # todo: add input validation
     def __init__(self, image_path, annotation_path, label_file, transform=None, target_transforms=None, shuffle=False,
                  resize_to=(320, 320), device='cpu'):
 
@@ -70,6 +43,31 @@ class YOLODataset(torch.utils.data.Dataset):
             self.class_names = classes
 
         self.class_dict = {class_name: i for i, class_name in enumerate(self.class_names)}
+
+    @staticmethod
+    def yolobbox2bbox(bbox: Sequence[int]):
+        x, y, w, h = bbox
+        x1, y1 = x - w / 2, y - h / 2
+        x2, y2 = x + w / 2, y + h / 2
+        return int(x1), int(y1), int(x2), int(y2)
+
+    @staticmethod
+    def scale_bbox(bbox: Sequence[int], image_width: int, image_height: int):
+        x, y, w, h = bbox
+        x *= image_width
+        w *= image_width
+        y *= image_height
+        h *= image_height
+        return x, y, w, h
+
+    @staticmethod
+    def resize_bbox(bbox: Sequence[int], x_factor, y_factor):
+        x1, y1, x2, y2 = bbox
+        x1 *= x_factor
+        x2 *= x_factor
+        y1 *= y_factor
+        y2 *= y_factor
+        return x1, y1, x2, y2
 
     def _validate_input(self):
         i = 0

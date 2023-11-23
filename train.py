@@ -1,21 +1,15 @@
-import math
-import sys
-
 from matplotlib import pyplot as plt
-from tqdm import tqdm
-import torchvision
-import random
 from torch.utils.data import Subset
 import pickle
-from coco_utils import get_coco_api_from_dataset
-from utils import collate_fn, reduce_dict
+from vision.references.detection.coco_utils import get_coco_api_from_dataset
+from vision.references.detection.utils import collate_fn
 from yolo_dataset import YOLODataset
 import torch
 import argparse
 from model import get_model
 import numpy as np
 import random
-from engine import evaluate, train_epoch
+from vision.references.detection.engine import evaluate, train_epoch
 
 plt.ion()
 
@@ -61,7 +55,7 @@ data_loader = torch.utils.data.DataLoader(
     dataset,
     # Subset(dataset, random.sample([i for i in range(len(dataset))], 100)),
     batch_size=2,
-    shuffle=False,
+    shuffle=True,
     num_workers=1,
     collate_fn=collate_fn,
     drop_last=True
