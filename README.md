@@ -1,4 +1,4 @@
-# SSDLite320-MobileNetV3-object-detection
+# SSDLite320 MobileNetV3 object detection
 
 This repository contains code for training and evaluating an SSDLite-320 object detector, utilizing MobileNetV3 as a
 feature extractor.
