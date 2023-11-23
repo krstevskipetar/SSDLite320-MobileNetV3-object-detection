@@ -1,5 +1,5 @@
-torch==2.0.0
-torchvision==0.15.1
+torch==2.1.0
+torchvision==0.16.0
 opencv-python
 tqdm
 numpy

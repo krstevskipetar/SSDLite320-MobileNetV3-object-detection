@@ -12,6 +12,9 @@ from torchvision import tv_tensors
 from torchvision.io import read_image
 from torchvision.transforms.v2 import functional as F
 
+random.seed(42)
+np.random.seed(42)
+
 
 def yolobbox2bbox(bbox: Sequence[int]):
     x, y, w, h = bbox
@@ -29,14 +32,22 @@ def scale_bbox(bbox: Sequence[int], image_width: int, image_height: int):
     return x, y, w, h
 
 
-resize = torchvision.transforms.Resize((640, 640), antialias=True)
+def resize_bbox(bbox: Sequence[int], x_factor, y_factor):
+    x1, y1, x2, y2 = bbox
+    x1 *= x_factor
+    x2 *= x_factor
+    y1 *= y_factor
+    y2 *= y_factor
+    return x1, y1, x2, y2
 
 
 class YOLODataset(torch.utils.data.Dataset):
 
     # todo: add input validation
-    def __init__(self, image_path, annotation_path, label_file, transform=None, target_transforms=None, shuffle=False):
+    def __init__(self, image_path, annotation_path, label_file, transform=None, target_transforms=None, shuffle=False,
+                 resize_to=(320, 320), device='cpu'):
 
+        self.device = device
         self.image_path = image_path
         self.annotation_path = annotation_path
         self.transform = transform
@@ -49,6 +60,9 @@ class YOLODataset(torch.utils.data.Dataset):
         self.annotation_files = [''.join(img.split('.')[:-1]) + '.txt' for img in self.image_files]
         self._validate_input()
         self.ids = [i for i in range(len(self.image_files))]
+        self.resize_to = resize_to
+        self.resized_h, self.resized_w = resize_to
+        self.resize = torchvision.transforms.Resize(resize_to, antialias=True)
 
         with open(label_file, 'r') as f:
             classes = f.readlines()
@@ -95,20 +109,25 @@ class YOLODataset(torch.utils.data.Dataset):
         if image.shape[0] > 3:
             image = image[:3, :, :]
         height, width = image.size()[1:3]
-        image = resize(image)
+        image = self.resize(image)
+        image = image.float()
+        image /= 255
 
         _boxes = []
         for box in boxes:
             x, y, w, h = scale_bbox(box, width, height)
             x1, y1, x2, y2 = yolobbox2bbox(bbox=[x, y, w, h])
+            x1, y1, x2, y2 = resize_bbox([x1, y1, x2, y2], self.resized_w / width, self.resized_h / height)
             _boxes.append([x1, y1, x2, y2])
         boxes = np.array(_boxes)
 
-        labels = torch.tensor([int(l) for l in labels])
-        iscrowd = torch.zeros((len(labels),), dtype=torch.int64)
+        labels = torch.tensor([int(l) for l in labels], device=self.device)
+        iscrowd = torch.zeros((len(labels),), dtype=torch.int64, device=self.device)
         area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
+        area = torch.tensor(area, device=self.device)
         target = {"boxes": tv_tensors.BoundingBoxes(boxes, format="XYXY",
-                                                    canvas_size=F.get_size(image)),
+                                                    canvas_size=F.get_size(image),
+                                                    device=self.device),
                   "labels": labels,
                   "area": area,
                   "iscrowd": iscrowd,

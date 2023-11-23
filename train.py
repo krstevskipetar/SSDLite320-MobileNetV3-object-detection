@@ -1,16 +1,27 @@
 import math
 import sys
 
+from matplotlib import pyplot as plt
 from tqdm import tqdm
 import torchvision
-
-print(torchvision.__version__)
+import random
+from torch.utils.data import Subset
+import pickle
+from coco_utils import get_coco_api_from_dataset
 from utils import collate_fn, reduce_dict
 from yolo_dataset import YOLODataset
 import torch
 import argparse
 from model import get_model
 import numpy as np
+import random
+from engine import evaluate, train_epoch
+
+plt.ion()
+
+torch.manual_seed(42)
+random.seed(42)
+np.random.seed(42)
 
 
 def parse_args():
@@ -21,15 +32,21 @@ def parse_args():
     parser.add_argument('--annotation_path_val', default='/home/petar/waste_dataset_v2/val/labels')
     parser.add_argument('--label_file', default='/home/petar/waste_dataset_v2/label_map.txt')
     parser.add_argument('--shuffle', action='store_true', default=False)
+    parser.add_argument('--device', default='cpu')
     argz = parser.parse_args()
 
     return argz
 
 
-import random
-from torch.utils.data import Subset
-
 args = parse_args()
+
+with open(args.label_file, 'r') as f:
+    classes = f.readlines()
+    classes = [c.strip() for c in classes]
+    class_names = classes
+
+class_dict = {class_name: i for i, class_name in enumerate(class_names)}
+
 dataset = YOLODataset(image_path=args.image_path,
                       annotation_path=args.annotation_path,
                       label_file=args.label_file,
@@ -43,100 +60,75 @@ dataset_val = YOLODataset(image_path=args.image_path_val,
 data_loader = torch.utils.data.DataLoader(
     dataset,
     # Subset(dataset, random.sample([i for i in range(len(dataset))], 100)),
-    batch_size=4,
+    batch_size=2,
     shuffle=False,
-    num_workers=4,
+    num_workers=1,
     collate_fn=collate_fn,
     drop_last=True
 )
 data_loader_val = torch.utils.data.DataLoader(
     dataset_val,
     # Subset(dataset, random.sample([i for i in range(len(dataset_val))], 100)),
-
-    batch_size=4,
+    batch_size=2,
     shuffle=False,
-    num_workers=4,
+    num_workers=1,
     collate_fn=collate_fn,
     drop_last=True
 )
 
-model = get_model(trainable_backbone_layers=6)
+model = get_model(num_classes=4, trainable_backbone_layers=6, weights=None)
 
 # construct an optimizer
 params = [p for p in model.parameters() if p.requires_grad]
 optimizer = torch.optim.SGD(
     params,
-    lr=0.0001,
+    lr=0.001,
     momentum=0.9,
     weight_decay=0.0005
 )
-
 # and a learning rate scheduler
-lr_scheduler = torch.optim.lr_scheduler.StepLR(
-    optimizer,
-    step_size=3,
-    gamma=0.1
-)
+lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
+                                                          T_max=10,
+                                                          eta_min=0)
 
-# let's train it for 5 epochs
-num_epochs = 12
+num_epochs = 15
 print_freq = 10
+evaluate_every = 5
 
-from engine import evaluate
+coco_subsets = {'val': get_coco_api_from_dataset(data_loader_val.dataset),
+                'train:': get_coco_api_from_dataset(data_loader.dataset)}
 
-
-def train_epoch():
-    model.train()
-    loss_value = 0
-    for idx, (images, targets) in tqdm(enumerate(data_loader), total=len(data_loader)):
-        images = list(image for image in images)
-        loss_dict = model(images, targets)  # Returns losses and detections
-        classification_loss = loss_dict['classification']
-        regression_loss = loss_dict['bbox_regression']
-        losses = sum(loss for loss in loss_dict.values())
-        loss = torch.sum(torch.stack((classification_loss, regression_loss)))
-        loss_value = loss.item()
-        classification_loss.backward(retain_graph=True)
-        regression_loss.backward()
-        # # reduce losses over all GPUs for logging purposes
-        # loss_dict_reduced = reduce_dict(loss_dict)
-        # losses_reduced = sum(loss for loss in loss_dict_reduced.values())
-        # loss_value = losses_reduced.item()
-        if not math.isfinite(loss_value):
-            print(f"Loss is {loss_value}, stopping training")
-            print(loss_value)
-            sys.exit(1)
-        if idx % print_freq == 0:
-            print("Loss: ", loss_value)
-        optimizer.zero_grad()
-        # losses.backward()
-        optimizer.step()
-        # print(loss_value)
-        if lr_scheduler is not None:
-            lr_scheduler.step()
-
-    torch.save({
-        'epoch': epoch,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'loss': loss_value,
-    }, f'checkpoints/epoch_{epoch}.pth')
-
-
-def validate():
-    evaluate(model, data_loader_val, torch.device('cpu'))
-
-
+all_losses = {}
+evaluators, loggers = [], []
+best_loss = np.inf
 for epoch in range(num_epochs):
     # train for one epoch, printing every 10 iterations
-    train_epoch()
-    print("Evaluation on train set")
-    evaluate(model, data_loader, torch.device('cpu'))
-    print("Evaluation on val set")
+    all_losses, epoch_loss = train_epoch(model=model,
+                                         optimizer=optimizer,
+                                         lr_scheduler=lr_scheduler,
+                                         data_loader=data_loader,
+                                         print_freq=print_freq,
+                                         epoch_number=epoch,
+                                         all_losses=all_losses)
+    if epoch_loss < best_loss:
+        best_loss = epoch_loss
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': best_loss,
+        }, f'checkpoints/epoch_{epoch}.pth')
 
-    evaluate(model, data_loader_val, torch.device('cpu'))
+    if epoch != 0 and epoch % evaluate_every == 0:
+        print("Evaluation on val set")
+        evltr, lgr = evaluate(model, data_loader_val, torch.device(args.device), coco_subsets['val'])
+        evaluators.append(evltr)
+        loggers.append(lgr)
 
-print("That's it!")
+with open('evltr.pkl', 'wb') as f:
+    pickle.dump(evaluators, f)
+with open('lgr.pkl', 'wb') as f:
+    pickle.dump(loggers, f)
 
 
 def main():
