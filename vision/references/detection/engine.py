@@ -7,8 +7,8 @@ import torch
 import torchvision.models.detection.mask_rcnn
 from tqdm import tqdm
 
-import utils
-from coco_eval import CocoEvaluator
+from . import utils
+from .coco_eval import CocoEvaluator
 
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq, scaler=None):
@@ -151,6 +151,4 @@ def evaluate(model, data_loader, device, coco):
     return coco_evaluator
 
 
-def validate(model, data_loader, device):  # todo: implement custom validation function
-    loss, accuracy = 0, 0
-    return loss, accuracy
+

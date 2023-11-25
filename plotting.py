@@ -64,8 +64,9 @@ def plot_predictions(image, prediction, gt, class_names=None, show_plot=True):
 
         # Add label and score to the bounding box
         ax.text(box[0], box[1], f'{label}: {score:.2f}', bbox=dict(facecolor='white', alpha=0.5))
+
     for box, label in zip(boxes_gt, labels_gt):
-        label = class_names[labels[i]]
+        label = class_names[label]
         # Create a Rectangle patch
         rect = patches.Rectangle((box[0], box[1]), box[2] - box[0], box[3] - box[1], linewidth=1, edgecolor='g',
                                  facecolor='none')
@@ -110,7 +111,8 @@ def plot_predictions_in_grid(images, predictions, ground_truths, class_names, n_
 
                 # Plot the image
                 ax = axs[i, j] if n_rows > 1 else axs[j]
-                image = np.array(image)
+                image = np.array(image) * 255
+                image = image.astype(np.uint8)
                 image = image.transpose(1, 2, 0)
                 ax.imshow(image)
 

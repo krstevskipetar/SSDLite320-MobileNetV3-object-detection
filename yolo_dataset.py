@@ -113,9 +113,9 @@ class YOLODataset(torch.utils.data.Dataset):
 
         _boxes = []
         for box in boxes:
-            x, y, w, h = scale_bbox(box, width, height)
-            x1, y1, x2, y2 = yolobbox2bbox(bbox=[x, y, w, h])
-            x1, y1, x2, y2 = resize_bbox([x1, y1, x2, y2], self.resized_w / width, self.resized_h / height)
+            x, y, w, h = self.scale_bbox(box, width, height)
+            x1, y1, x2, y2 = self.yolobbox2bbox(bbox=[x, y, w, h])
+            x1, y1, x2, y2 = self.resize_bbox([x1, y1, x2, y2], self.resized_w / width, self.resized_h / height)
             _boxes.append([x1, y1, x2, y2])
         boxes = np.array(_boxes)
 
