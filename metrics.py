@@ -74,9 +74,9 @@ def calculate_ap_ar_map(predictions, ground_truth, iou_thresholds=None):
     num_samples = len(predictions)
     ap = total_precision / num_samples if num_samples > 0 else 0
     ar = total_recall / num_samples if num_samples > 0 else 0
-    map = total_map / num_samples if num_samples > 0 else 0
+    mean_ap = total_map / num_samples if num_samples > 0 else 0
 
-    return ap, ar, map
+    return ap, ar, mean_ap
 
 
 def calculate_average_precision(predictions, targets, iou_thresholds=None):
@@ -85,7 +85,7 @@ def calculate_average_precision(predictions, targets, iou_thresholds=None):
 
     true_positives = 0
     false_positives = 0
-    total_gt_boxes = len(targets)
+    total_gt_boxes = len(targets['boxes'])
     precision_values = []
 
     if total_gt_boxes == 0:

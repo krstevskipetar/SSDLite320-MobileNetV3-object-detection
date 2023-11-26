@@ -33,7 +33,7 @@ def validate(model, data_loader, device, iou_thresholds=None):  # todo: implemen
     ap, ar, mean_ap = np.mean(all_ap), np.mean(all_ar), np.mean(all_map)
     print("Average precision: ", ap)
     print("Average recall: ", ar)
-    print(f"mAP for IoU thresholds {iou_thresholds}: ", ap)
+    print(f"mAP for IoU thresholds {iou_thresholds}: ", mean_ap)
     return ap, ar, mean_ap
 
 

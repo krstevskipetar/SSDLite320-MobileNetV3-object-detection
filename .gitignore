@@ -1,3 +1,5 @@
 /venv/
 .gitignore
 /checkpoints/
+/wandb/
+/batch_predictions/

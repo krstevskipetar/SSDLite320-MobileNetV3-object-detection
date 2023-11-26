@@ -1,6 +1,11 @@
 from matplotlib import pyplot as plt
 from torch.utils.data import Subset
 import pickle
+
+from engine import validate
+from load_data import load_train_and_val_datasets, create_train_and_val_dataloaders, load_class_names
+from logging import log_to_wandb
+from validate import infer_and_plot_batch_predictions
 from vision.references.detection.coco_utils import get_coco_api_from_dataset
 from vision.references.detection.utils import collate_fn
 from yolo_dataset import YOLODataset
@@ -27,106 +32,120 @@ def parse_args():
     parser.add_argument('--label_file', default='/home/petar/waste_dataset_v2/label_map.txt')
     parser.add_argument('--shuffle', action='store_true', default=False)
     parser.add_argument('--device', default='cpu')
+    parser.add_argument('--batch_size', type=int, default=16)
+    parser.add_argument('--num_epochs', type=int, default=100)
+    parser.add_argument('--print_freq', type=int, default=100)
+    parser.add_argument('--evaluate_every', type=int, default=5)
+    parser.add_argument('--num_classes', type=int, default=4)
+    parser.add_argument('--trainable_backbone_layers', type=int, default=6)
+    parser.add_argument('--weights', default=None)
+    parser.add_argument('--wandb_logging', default=True)
+    parser.add_argument('--wandb_project_name', default='SSDLite320-MobileNetV3 Waste Classification')
     argz = parser.parse_args()
 
     return argz
 
 
-args = parse_args()
-
-with open(args.label_file, 'r') as f:
-    classes = f.readlines()
-    classes = [c.strip() for c in classes]
-    class_names = classes
-
-class_dict = {class_name: i for i, class_name in enumerate(class_names)}
-
-dataset = YOLODataset(image_path=args.image_path,
-                      annotation_path=args.annotation_path,
-                      label_file=args.label_file,
-                      shuffle=args.shuffle)
-
-dataset_val = YOLODataset(image_path=args.image_path_val,
-                          annotation_path=args.annotation_path_val,
-                          label_file=args.label_file,
-                          shuffle=args.shuffle)
-
-data_loader = torch.utils.data.DataLoader(
-    dataset,
-    # Subset(dataset, random.sample([i for i in range(len(dataset))], 100)),
-    batch_size=2,
-    shuffle=True,
-    num_workers=1,
-    collate_fn=collate_fn,
-    drop_last=True
-)
-data_loader_val = torch.utils.data.DataLoader(
-    dataset_val,
-    # Subset(dataset, random.sample([i for i in range(len(dataset_val))], 100)),
-    batch_size=2,
-    shuffle=False,
-    num_workers=1,
-    collate_fn=collate_fn,
-    drop_last=True
-)
-
-model = get_model(num_classes=4, trainable_backbone_layers=6, weights=None)
-
-# construct an optimizer
-params = [p for p in model.parameters() if p.requires_grad]
-optimizer = torch.optim.SGD(
-    params,
-    lr=0.001,
-    momentum=0.9,
-    weight_decay=0.0005
-)
-# and a learning rate scheduler
-lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
-                                                          T_max=10,
-                                                          eta_min=0)
-
-num_epochs = 15
-print_freq = 10
-evaluate_every = 5
-
-coco_subsets = {'val': get_coco_api_from_dataset(data_loader_val.dataset),
-                'train:': get_coco_api_from_dataset(data_loader.dataset)}
-
-all_losses = {}
-evaluators, loggers = [], []
-best_loss = np.inf
-for epoch in range(num_epochs):
-    # train for one epoch, printing every 10 iterations
-    all_losses, epoch_loss = train_epoch(model=model,
-                                         optimizer=optimizer,
-                                         lr_scheduler=lr_scheduler,
-                                         data_loader=data_loader,
-                                         print_freq=print_freq,
-                                         epoch_number=epoch,
-                                         all_losses=all_losses)
-    if epoch_loss < best_loss:
-        best_loss = epoch_loss
+def run_training(data_loader_train, data_loader_val, model, optimizer, lr_scheduler, class_names,
+                 num_epochs=100, device='cpu', print_freq=100, evaluate_every=5):
+    all_losses = {}
+    metrics = {key: [] for key in ['ap', 'ar', 'mAP']}
+    last_checkpoint = ''
+    for epoch in range(num_epochs):
+        # train for one epoch, printing every 10 iterations
+        all_losses, epoch_loss = train_epoch(model=model,
+                                             optimizer=optimizer,
+                                             lr_scheduler=lr_scheduler,
+                                             data_loader=data_loader_train,
+                                             print_freq=print_freq,
+                                             epoch_number=epoch,
+                                             all_losses=all_losses)
         torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
-            'loss': best_loss,
+            'loss': epoch_loss,
         }, f'checkpoints/epoch_{epoch}.pth')
+        if epoch != 0 and epoch % evaluate_every == 0:
+            print("Evaluation on val set")
+            ap, ar, mean_ap = validate(model, data_loader_val, torch.device(device), [0.5])
+            metrics['average_precision'].append(ap)
+            metrics['average_recall'].append(ar)
+            metrics['mAP@50'].append(mean_ap)
+        last_checkpoint = f'checkpoints/epoch_{epoch}.pth'
 
-    if epoch != 0 and epoch % evaluate_every == 0:
-        print("Evaluation on val set")
-        evltr, lgr = evaluate(model, data_loader_val, torch.device(args.device), coco_subsets['val'])
-        evaluators.append(evltr)
-        loggers.append(lgr)
-
-with open('evltr.pkl', 'wb') as f:
-    pickle.dump(evaluators, f)
-with open('lgr.pkl', 'wb') as f:
-    pickle.dump(loggers, f)
+    figures = infer_and_plot_batch_predictions(model, data_loader_val, class_names, 5)
+    return metrics, figures, last_checkpoint
 
 
 def main():
-    pass
+    global args
+    args = parse_args()
+
+    class_names = load_class_names(args.label_file)
+
+    dataset_train, dataset_val = load_train_and_val_datasets(image_path_train=args.image_path,
+                                                             annotation_path_train=args.annotation_path,
+                                                             image_path_val=args.image_path_val,
+                                                             annotation_path_val=args.annotation_path_val,
+                                                             label_file=args.label_file,
+                                                             shuffle_train=args.shuffle,
+                                                             shuffle_val=args.shuffle)
+
+    data_loader_train, data_loader_val = create_train_and_val_dataloaders(dataset_train=dataset_train,
+                                                                          dataset_val=dataset_val,
+                                                                          batch_size_train=args.batch_size,
+                                                                          batch_size_val=args.batch_size,
+                                                                          shuffle_train=True,
+                                                                          shuffle_val=False,
+                                                                          num_workers=1)
+
+    model = get_model(num_classes=args.num_classes,
+                      trainable_backbone_layers=args.trainable_backbone_layers,
+                      weights=args.weights)
+
+    # construct an optimizer
+    params = [p for p in model.parameters() if p.requires_grad]
+    optimizer = torch.optim.SGD(
+        params,
+        lr=0.001,
+        momentum=0.9,
+        weight_decay=0.0005
+    )
+
+    # and a learning rate scheduler
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
+                                                              T_max=10,
+                                                              eta_min=0)
+
+    metrics, figures, last_checkpoint = run_training(data_loader_train=data_loader_train,
+                                                     data_loader_val=data_loader_val,
+                                                     model=model,
+                                                     optimizer=optimizer,
+                                                     lr_scheduler=lr_scheduler,
+                                                     class_names=class_names,
+                                                     device=args.device,
+                                                     print_freq=args.print_freq,
+                                                     evaluate_every=args.evaluate_every)
+
+    if args.wandb_logging:
+        config = {
+            "run_type": "training",
+            "optimizer": "SGD",
+            "weight_decay": 0.0005,
+            "momentum": 0.9,
+            "lr_scheduler": "CosineAnnealingLR",
+            "T_max": 10,
+            "eta_min": 0,
+            "learning_rate": 0.001,
+            "detector": "SSDLite",
+            "backbone": "MobileNetV3",
+            "dataset": "waste-dataset-v2",
+            "epochs": args.num_epochs,
+            "checkpoint": last_checkpoint
+        }
+
+        log_to_wandb(args.wandb_project_name, config, metrics, figures, last_checkpoint)
 
 
 if __name__ == "__main__":
