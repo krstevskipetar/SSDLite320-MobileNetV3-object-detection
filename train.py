@@ -4,7 +4,7 @@ import pickle
 
 from engine import validate
 from load_data import load_train_and_val_datasets, create_train_and_val_dataloaders, load_class_names
-from logging import log_to_wandb
+from wandb_logging import log_to_wandb
 from validate import infer_and_plot_batch_predictions
 from vision.references.detection.coco_utils import get_coco_api_from_dataset
 from vision.references.detection.utils import collate_fn

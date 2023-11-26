@@ -5,7 +5,7 @@ from torch.utils.data import Subset
 import pickle
 
 from load_data import load_class_names
-from logging import log_to_wandb
+from wandb_logging import log_to_wandb
 from vision.references.detection.coco_utils import get_coco_api_from_dataset
 from vision.references.detection.utils import collate_fn
 from yolo_dataset import YOLODataset
