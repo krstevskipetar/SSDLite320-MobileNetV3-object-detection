@@ -34,6 +34,7 @@ def parse_args():
     parser.add_argument('--shuffle', action='store_true', default=False)
     parser.add_argument('--device', default='cpu')
     parser.add_argument('--checkpoint', default="checkpoints/checkpoints/epoch_99.pth")
+    parser.add_argument('--num_classes', type=int, default=4)
     parser.add_argument('--wandb_logging', action='store_true', default=False)
     parser.add_argument('--wandb_project_name')
     argz = parser.parse_args()
@@ -75,15 +76,26 @@ def main():
         drop_last=True
     )
     device = torch.device(args.device)
-    model = get_model(num_classes=4, trainable_backbone_layers=6, weights=None)
+    model = get_model(num_classes=args.num_classes)
     if args.checkpoint:
         model.load_state_dict(torch.load(args.checkpoint, map_location=device)['model_state_dict'])
     model.eval()
+    iou_thresholds = [0.5]
+    mean_ap, mean_ar, class_precisions, class_recalls = validate(model=model,
+                                                                 data_loader=data_loader_val,
+                                                                 class_names=class_names,
+                                                                 device=device,
+                                                                 iou_thresholds=iou_thresholds)
+    print("For iou thresholds", iou_thresholds)
+    print(f"Mean Average Precision: {mean_ap}\nMean Average Recall: {mean_ar}")
 
-    ap, ar, mean_ap = validate(model=model,
-                               data_loader=data_loader_val,
-                               device=device,
-                               iou_thresholds=[0.5])
+    print("Class precisions: ")
+    for key, value in class_precisions.items():
+        print(f"\t-{key}: {value}")
+
+    print("Class recalls: ")
+    for key, value in class_recalls.items():
+        print(f"\t-{key}: {value}")
 
     config = {
         "run_type": "validation",
@@ -100,9 +112,12 @@ def main():
         "epochs": 100,
         "checkpoint": args.checkpoint
     }
-    metrics = {'average_precision': ap,
-               'average_recall': ar,
-               'mAP@50': mean_ap}
+    metrics = {'mAP@50': mean_ap,
+               'mAR@50': mean_ar}
+    metrics.update(
+        {str(class_name) + '_precision': class_precision for class_name, class_precision in class_precisions.items()})
+    metrics.update(
+        {str(class_name) + '_recall': class_recall for class_name, class_recall in class_recalls.items()})
     figures = infer_and_plot_batch_predictions(model, data_loader_val, class_names, 5)
     log_to_wandb(args.wandb_project_name, config, metrics, figures, args.checkpoint)
 

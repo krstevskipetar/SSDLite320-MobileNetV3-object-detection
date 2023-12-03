@@ -36,7 +36,7 @@ def parse_args():
     parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--print_freq', type=int, default=100)
     parser.add_argument('--evaluate_every', type=int, default=5)
-    parser.add_argument('--num_classes', type=int, default=4)
+    parser.add_argument('--num_classes', type=int, default=5)
     parser.add_argument('--trainable_backbone_layers', type=int, default=6)
     parser.add_argument('--weights', default=None)
     parser.add_argument('--wandb_logging', default=True)
@@ -68,10 +68,22 @@ def run_training(data_loader_train, data_loader_val, model, optimizer, lr_schedu
         }, f'checkpoints/epoch_{epoch}.pth')
         if epoch != 0 and epoch % evaluate_every == 0:
             print("Evaluation on val set")
-            ap, ar, mean_ap = validate(model, data_loader_val, torch.device(device), [0.5])
-            metrics['average_precision'].append(ap)
-            metrics['average_recall'].append(ar)
+            mean_ap, mean_ar, class_precisions, class_recalls = validate(model, data_loader_val, class_names,
+                                                                         torch.device(device), [0.5])
             metrics['mAP@50'].append(mean_ap)
+            metrics['mAR@50'].append(mean_ar)
+
+            print("For iou thresholds", 0.5)
+            print(f"Mean Average Precision: {mean_ap}\nMean Average Recall: {mean_ar}")
+
+            print("Class precisions: ")
+            for key, value in class_precisions.items():
+                print(f"\t-{key}: {value}")
+
+            print("Class recalls: ")
+            for key, value in class_recalls.items():
+                print(f"\t-{key}: {value}")
+
         last_checkpoint = f'checkpoints/epoch_{epoch}.pth'
 
     figures = infer_and_plot_batch_predictions(model, data_loader_val, class_names, 5)

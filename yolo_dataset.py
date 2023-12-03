@@ -42,7 +42,8 @@ class YOLODataset(torch.utils.data.Dataset):
             classes = [c.strip() for c in classes]
             self.class_names = classes
 
-        self.class_dict = {class_name: i for i, class_name in enumerate(self.class_names)}
+        self.class_dict = {class_name: i + 1 for i, class_name in
+                           enumerate(self.class_names)}  # +1 for background class
 
     @staticmethod
     def yolobbox2bbox(bbox: Sequence[int]):
@@ -95,7 +96,7 @@ class YOLODataset(torch.utils.data.Dataset):
             ann_file = [[float(a) for a in ann_line.strip().split(' ')] for ann_line in ann_file]
 
         ann_file = np.array(ann_file)
-        labels = ann_file[:, 0].astype(int)
+        labels = ann_file[:, 0].astype(int) + 1  # +1 for background class
         boxes = ann_file[:, 1:]
         return boxes.tolist(), labels.tolist()
 
