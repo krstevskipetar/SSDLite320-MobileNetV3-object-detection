@@ -44,13 +44,16 @@ def validate(model, data_loader, class_names, device, iou_thresholds=None):
     return mean_ap, mean_ar, all_class_precisions, all_class_recalls
 
 
-def train_epoch(model, optimizer, lr_scheduler, data_loader, print_freq=100, epoch_number=0, all_losses=None):
+def train_epoch(model, optimizer, lr_scheduler, data_loader, device, print_freq=100, epoch_number=0, all_losses=None):
     model.train()
     local_losses = []
+    device = torch.device(device)
     for idx, (images, targets) in tqdm(enumerate(data_loader), total=len(data_loader), position=0, leave=True):
 
         optimizer.zero_grad()
-        images = list(image.cuda() for image in images)
+        images = list(image.to(device) for image in images)
+        targets = [{k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in t.items()} for t in targets]
+
         loss_dict = model(images, targets)  # Returns losses and detections
         losses = sum(loss for loss in loss_dict.values())
         # reduce losses over all GPUs for logging purposes

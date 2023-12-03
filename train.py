@@ -1,8 +1,12 @@
+import os
+from datetime import datetime
+from os.path import join
+
 from matplotlib import pyplot as plt
 from torch.utils.data import Subset
 import pickle
 
-from engine import validate
+from engine import validate, train_epoch
 from load_data import load_train_and_val_datasets, create_train_and_val_dataloaders, load_class_names
 from wandb_logging import log_to_wandb
 from validate import infer_and_plot_batch_predictions
@@ -14,7 +18,8 @@ import argparse
 from model import get_model
 import numpy as np
 import random
-from vision.references.detection.engine import evaluate, train_epoch
+
+# from vision.references.detection.engine import evaluate, train_epoch
 
 plt.ion()
 
@@ -41,22 +46,38 @@ def parse_args():
     parser.add_argument('--weights', default=None)
     parser.add_argument('--wandb_logging', default=True)
     parser.add_argument('--wandb_project_name', default='SSDLite320-MobileNetV3 Waste Classification')
-    argz = parser.parse_args()
+    return parser.parse_args()
 
-    return argz
+def create_unique_folder(base_path, prefix='_idx'):
+    timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    index = 1
+
+    while True:
+        folder_name = f"{timestamp}{prefix}{index}"
+        folder_path = os.path.join(base_path, folder_name)
+
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+            return folder_path
+        else:
+            index += 1
 
 
 def run_training(data_loader_train, data_loader_val, model, optimizer, lr_scheduler, class_names,
                  num_epochs=100, device='cpu', print_freq=100, evaluate_every=5):
+
+    checkpoint_path = create_unique_folder('checkpoints', '_run_#')
     all_losses = {}
-    metrics = {key: [] for key in ['ap', 'ar', 'mAP']}
+    metrics = {key: [] for key in ['mAP@50', 'mAR@50']}
     last_checkpoint = ''
     for epoch in range(num_epochs):
+        epoch = epoch + 1
         # train for one epoch, printing every 10 iterations
         all_losses, epoch_loss = train_epoch(model=model,
                                              optimizer=optimizer,
                                              lr_scheduler=lr_scheduler,
                                              data_loader=data_loader_train,
+                                             device=device,
                                              print_freq=print_freq,
                                              epoch_number=epoch,
                                              all_losses=all_losses)
@@ -84,16 +105,14 @@ def run_training(data_loader_train, data_loader_val, model, optimizer, lr_schedu
             for key, value in class_recalls.items():
                 print(f"\t-{key}: {value}")
 
-        last_checkpoint = f'checkpoints/epoch_{epoch}.pth'
+        last_checkpoint = join(checkpoint_path, f'/epoch_{epoch}.pth')
 
     figures = infer_and_plot_batch_predictions(model, data_loader_val, class_names, 5)
     return metrics, figures, last_checkpoint
 
 
 def main():
-    global args
     args = parse_args()
-
     class_names = load_class_names(args.label_file)
 
     dataset_train, dataset_val = load_train_and_val_datasets(image_path_train=args.image_path,

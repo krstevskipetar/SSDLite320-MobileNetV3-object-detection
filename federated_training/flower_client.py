@@ -76,7 +76,6 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    global args
     args = parse_args()
     dataset = YOLODataset(image_path=args.image_path,
                           annotation_path=args.annotation_path,

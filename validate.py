@@ -42,9 +42,6 @@ def parse_args():
     return argz
 
 
-args = parse_args()
-
-
 def infer_and_plot_batch_predictions(model, data_loader_val, class_names, n_plots=5):
     figs = []
     for idx, (images, targets) in enumerate(data_loader_val):
@@ -58,6 +55,9 @@ def infer_and_plot_batch_predictions(model, data_loader_val, class_names, n_plot
 
 
 def main():
+
+    args = parse_args()
+
     class_names = load_class_names(args.label_file)
 
     dataset_val = YOLODataset(image_path=args.image_path_val,
