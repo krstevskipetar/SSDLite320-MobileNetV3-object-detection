@@ -50,23 +50,17 @@ def parse_args():
 
 def create_unique_folder(base_path, prefix='_idx'):
     timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    index = 1
+    folder_name = f"{prefix}{timestamp}"
+    folder_path = os.path.join(base_path, folder_name)
 
-    while True:
-        folder_name = f"{timestamp}{prefix}{index}"
-        folder_path = os.path.join(base_path, folder_name)
-
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-            return folder_path
-        else:
-            index += 1
-
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+        return folder_path
 
 def run_training(data_loader_train, data_loader_val, model, optimizer, lr_scheduler, class_names,
                  num_epochs=100, device='cpu', print_freq=100, evaluate_every=5):
 
-    checkpoint_path = create_unique_folder('checkpoints', '_run_#')
+    checkpoint_path = create_unique_folder('checkpoints', 'run')
     all_losses = {}
     metrics = {key: [] for key in ['mAP@50', 'mAR@50']}
     last_checkpoint = ''
@@ -175,7 +169,6 @@ def main():
             "epochs": args.num_epochs,
             "checkpoint": last_checkpoint
         }
-
         log_to_wandb(args.wandb_project_name, config, metrics, figures, last_checkpoint)
 
 

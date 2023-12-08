@@ -86,10 +86,9 @@ def calculate_ap_ar_map(predictions, ground_truth, class_names, iou_thresholds=N
     total_precision = 0
     total_recall = 0
     num_classes = len(class_names)
-    class_name_dict = {i + 1: class_name for (i, class_name) in enumerate(class_names)}
+    class_name_dict = {i: class_name for (i, class_name) in enumerate(class_names)}
     class_precisions, class_recalls = {}, {}
-    for class_id in range(num_classes):
-        class_id += 1
+    for class_id in range(1, num_classes, 1):
         class_predictions = filter_values_by_class(values=predictions, class_id=class_id)
         class_ground_truth = filter_values_by_class(values=ground_truth, class_id=class_id)
         total_precision_class = 0

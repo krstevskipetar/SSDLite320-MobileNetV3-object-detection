@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -149,4 +151,38 @@ def plot_predictions_in_grid(images, predictions, ground_truths, class_names, n_
     plt.tight_layout()
     if show_plot:
         plt.show()
+    return fig
+
+
+def calculate_dimensions(num_plots):
+    if num_plots <= 1:
+        n_rows = 1
+        n_columns = num_plots
+    else:
+        n_rows = 2
+        n_columns = (num_plots + 1) // n_rows
+
+    return n_rows, n_columns
+
+
+def plot_metrics(metrics: dict):
+    n_rows, n_columns = calculate_dimensions(len(metrics.keys()))
+    fig, axs = plt.subplots(n_rows, n_columns, layout="constrained")
+
+    for key, ax in zip(metrics.keys(), axs):
+        metric = metrics[key]
+        for k in metric.keys():
+            ax.scatter(k, metric[k])
+        values = [metric[k] for k in metric.keys()]
+        max_val = np.max(values), np.argmax(values) * 5
+
+        ax.text(max_val[1], max_val[0] - 0.06, f'{key}: {max_val[0]:.4f}\n Epoch: {max_val[1]}')
+        values = np.interp([i for i in range(np.max([int(k) for k in metric.keys()]))],
+                           [int(k) for k in metric.keys()], values)
+        ax.plot(values)
+        ax.set_title(key)
+        ax.set_xlabel('Epoch')
+        ax.set_ylabel(key)
+
+    plt.show()
     return fig
