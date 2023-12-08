@@ -1,6 +1,6 @@
 import os
 import threading
-from socket import socket
+import socket
 
 
 def start_server(host, port, output_directory):

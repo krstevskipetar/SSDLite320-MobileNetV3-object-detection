@@ -3,7 +3,7 @@ import argparse
 import os
 import threading
 
-from federated_training.distributed_comms import send_file
+from distributed_comms import send_file
 
 
 def parse_args():
