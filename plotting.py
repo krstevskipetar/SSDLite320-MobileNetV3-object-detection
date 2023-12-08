@@ -32,7 +32,8 @@ def plot_image(image_tensor, bounding_box, show_plot=True):
     return fig
 
 
-def plot_predictions(image, prediction, gt, class_names=None, show_plot=True):
+def plot_predictions(image, prediction, gt, class_names=None, show_plot=True, nms_threshold: float = 0.1,
+                     score_threshold: float = 0.2):
     boxes = prediction['boxes']
     scores = prediction['scores']
     labels = prediction['labels']
@@ -40,7 +41,7 @@ def plot_predictions(image, prediction, gt, class_names=None, show_plot=True):
     boxes_gt = gt['boxes'].cpu()
     labels_gt = gt['labels'].cpu()
 
-    keep = apply_nms(boxes, scores, 0.1)
+    keep = apply_nms(boxes, scores, nms_threshold, score_threshold)
     boxes = boxes.tolist()
     scores = scores.tolist()
     labels = labels.tolist()
