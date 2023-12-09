@@ -42,6 +42,7 @@ def receive_file(conn, output_directory, file_name):
 
     with open(file_name, 'wb') as file:
         while file_size > 0:
+            file.flush()
             data = conn.recv(1024)
             file.write(data)
             file.flush()
