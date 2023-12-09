@@ -36,7 +36,7 @@ def send_file(host, port, file_path):
 
 def receive_file(conn, output_directory, file_name):
     file_name = os.path.join(output_directory, file_name)
-    file_size = int(conn.recv(1024).decode('utf-16'))
+    file_size = int(conn.recv(1024).decode('utf-64'))
     print(f"Receiving file of size {file_size} bytes")
 
     with open(file_name, 'wb') as file:
@@ -51,7 +51,7 @@ def receive_file(conn, output_directory, file_name):
 
 def send_file_data(conn, file_path):
     file_size = os.path.getsize(file_path)
-    conn.sendall(str(file_size).encode('utf-16'))
+    conn.sendall(str(file_size).encode('utf-64'))
     print(f"Sending file of size {file_size} bytes")
 
     with open(file_path, 'rb') as file:
