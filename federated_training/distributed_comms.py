@@ -32,17 +32,19 @@ def send_file(host, port, file_path):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
         send_file_data(s, file_path)
+        s.close()
 
 
 def receive_file(conn, output_directory, file_name):
     file_name = os.path.join(output_directory, file_name)
-    file_size = int(conn.recv(1024).decode('utf-64'))
+    file_size = int(conn.recv(1024).decode('utf-16'))
     print(f"Receiving file of size {file_size} bytes")
 
     with open(file_name, 'wb') as file:
         while file_size > 0:
             data = conn.recv(1024)
             file.write(data)
+            file.flush()
             file_size -= len(data)
             print(f"Received {len(data)} bytes, remaining {file_size} bytes")
 
@@ -51,7 +53,7 @@ def receive_file(conn, output_directory, file_name):
 
 def send_file_data(conn, file_path):
     file_size = os.path.getsize(file_path)
-    conn.sendall(str(file_size).encode('utf-64'))
+    conn.sendall(str(file_size).encode('utf-16'))
     print(f"Sending file of size {file_size} bytes")
 
     with open(file_path, 'rb') as file:
