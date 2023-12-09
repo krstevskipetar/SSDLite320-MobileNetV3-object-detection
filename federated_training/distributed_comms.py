@@ -39,11 +39,8 @@ def send_file(host, port, file_path):
 
 def receive_file(conn, output_directory, file_name):
     file_name = os.path.join(output_directory, file_name)
-    try:
-        data = conn.recv(1024)
-        file_size = int(data.decode('utf-8'))
-    except Exception as e:
-        breakpoint()
+    data = conn.recv(1024)
+    file_size = int(data.decode('utf-8'))
 
     print(f"Receiving file of size {file_size} bytes")
 
