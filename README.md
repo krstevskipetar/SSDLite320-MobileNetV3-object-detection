@@ -31,7 +31,7 @@ format (https://docs.ultralytics.com/datasets/detect/#ultralytics-yolo-format),
 i.e. for each image example.jpg there should be a corresponding annotation file example.txt containing bounding box
 annotations in
 a normalized XYWH format. The annotation file should contain one row per object in class x_center y_center width height
-format.
+format. Non-background classes should start at class_id 1 .
 
 The YOLODataset class then reformats the XYWH input annotations into an unnormalized XYXY format for compatibility with
 torch models, which use the COCO format.
