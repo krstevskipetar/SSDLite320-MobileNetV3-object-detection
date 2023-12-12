@@ -1,12 +1,11 @@
 import os
 import socket
-import threading
 import time
 
 import torch
 
-from engine import train_epoch
-from model import get_model
+from core.engine import train_epoch
+from core.model import get_model
 
 
 class ClientFineTune:

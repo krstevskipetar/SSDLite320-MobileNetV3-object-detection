@@ -6,10 +6,10 @@ import numpy as np
 import torch
 import flwr as fl
 
-from model import get_model
+from core.model import get_model
 from vision.references.detection.engine import train_epoch, validate
 from vision.references.detection.utils import collate_fn
-from yolo_dataset import YOLODataset
+from data.yolo_dataset import YOLODataset
 
 
 def get_parameters(model) -> List[np.ndarray]:

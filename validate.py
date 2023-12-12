@@ -1,23 +1,17 @@
-from typing import Literal
-
 from matplotlib import pyplot as plt
 from torch.utils.data import Subset
-import pickle
 
-from load_data import load_class_names
-from wandb_logging import log_to_wandb
-from vision.references.detection.coco_utils import get_coco_api_from_dataset
+from data.load_data import load_class_names
+from core.wandb_logging import log_to_wandb
 from vision.references.detection.utils import collate_fn
-from yolo_dataset import YOLODataset
+from data.yolo_dataset import YOLODataset
 import torch
 import argparse
-from model import get_model
+from core.model import get_model
 import numpy as np
 import random
-from vision.references.detection.engine import evaluate, train_epoch
-from metrics import calculate_ap_ar_map
-from engine import validate
-from plotting import plot_predictions_in_grid
+from core.engine import validate
+from core.plotting import plot_predictions_in_grid
 
 plt.ion()
 

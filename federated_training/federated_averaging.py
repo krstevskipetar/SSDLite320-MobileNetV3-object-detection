@@ -6,7 +6,7 @@ import time
 
 import torch
 
-from model import get_model
+from core.model import get_model
 
 
 class FedAvg:
