@@ -3,19 +3,14 @@ from datetime import datetime
 from os.path import join
 
 from matplotlib import pyplot as plt
-from torch.utils.data import Subset
-import pickle
 
-from engine import validate, train_epoch
-from load_data import load_train_and_val_datasets, create_train_and_val_dataloaders, load_class_names
-from wandb_logging import log_to_wandb
+from core.engine import validate, train_epoch
+from data.load_data import load_train_and_val_datasets, create_train_and_val_dataloaders, load_class_names
+from core.wandb_logging import log_to_wandb
 from validate import infer_and_plot_batch_predictions
-from vision.references.detection.coco_utils import get_coco_api_from_dataset
-from vision.references.detection.utils import collate_fn
-from yolo_dataset import YOLODataset
 import torch
 import argparse
-from model import get_model
+from core.model import get_model
 import numpy as np
 import random
 
