@@ -6,7 +6,7 @@ import torch
 from tqdm import tqdm
 
 from vision.references.detection import utils
-from metrics import calculate_ap_ar_map
+from core.metrics import calculate_ap_ar_map
 import time
 
 

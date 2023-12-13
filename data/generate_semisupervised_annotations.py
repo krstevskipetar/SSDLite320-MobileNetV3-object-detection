@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument('output_directory')
     parser.add_argument('--device', default='cpu')
     parser.add_argument('--num_classes', type=int, default=5)
-    parser.add_argument('--iou_threshold', type=float, default=0.5)
+    parser.add_argument('--iou_threshold', type=float, default=0.1)
     parser.add_argument('--score_threshold', type=float, default=0.2)
 
 
@@ -30,7 +30,7 @@ def infer_annotations(checkpoint, input_directory, output_directory, device='cpu
                     os.listdir(input_directory))
 
     for img_name, img in image_loader:
-        predictions = model([img.float()])
+        predictions = model([img.float() / 255])
 
         keep = apply_nms(predictions['boxes'], predictions['scores'], threshold=iou_threshold,
                          score_threshold=score_threshold)

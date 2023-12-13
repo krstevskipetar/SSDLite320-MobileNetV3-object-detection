@@ -1,7 +1,7 @@
 import torch
 
 from vision.references.detection.utils import collate_fn
-from yolo_dataset import YOLODataset
+from data.yolo_dataset import YOLODataset
 
 
 def load_train_and_val_datasets(image_path_train, annotation_path_train, image_path_val, annotation_path_val,

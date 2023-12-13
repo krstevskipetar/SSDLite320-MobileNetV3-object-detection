@@ -1,3 +1,6 @@
+import os
+from datetime import datetime
+
 from matplotlib import pyplot as plt
 from torch.utils.data import Subset
 
@@ -22,9 +25,9 @@ np.random.seed(42)
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--image_path_val', default='/home/petar/waste_dataset_v2/val/images')
-    parser.add_argument('--annotation_path_val', default='/home/petar/waste_dataset_v2/val/labels')
-    parser.add_argument('--label_file', default='/home/petar/waste_dataset_v2/label_map.txt')
+    parser.add_argument('--image_path_val', default='/home/petar/waste_dataset_v2_refactored/val/images')
+    parser.add_argument('--annotation_path_val', default='/home/petar/waste_dataset_v2_refactored/val/labels')
+    parser.add_argument('--label_file', default='/home/petar/waste_dataset_v2_refactored/label_map.txt')
     parser.add_argument('--shuffle', action='store_true', default=False)
     parser.add_argument('--device', default='cpu')
     parser.add_argument('--checkpoint', default="checkpoints/checkpoints/epoch_99.pth")
@@ -36,20 +39,30 @@ def parse_args():
     return argz
 
 
+def create_unique_folder(base_path, prefix='_idx'):
+    timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    folder_name = f"{prefix}{timestamp}"
+    folder_path = os.path.join(base_path, folder_name)
+
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+        return folder_path
+
+
 def infer_and_plot_batch_predictions(model, data_loader_val, class_names, n_plots=5):
     figs = []
+    run = create_unique_folder("batch_predictions")
     for idx, (images, targets) in enumerate(data_loader_val):
         predictions = model(images)
         fig = plot_predictions_in_grid(images, predictions, targets, class_names, show_plot=False)
         figs.append(fig)
-        fig.savefig(f"batch_predictions/batch_predictions_{idx}.png")
+        fig.savefig(f"{run}/batch_predictions_{idx}.png")
         if idx != 0 and (idx + 1) % n_plots == 0:
             break
     return figs
 
 
 def main():
-
     args = parse_args()
 
     class_names = load_class_names(args.label_file)
@@ -74,7 +87,7 @@ def main():
     if args.checkpoint:
         model.load_state_dict(torch.load(args.checkpoint, map_location=device)['model_state_dict'])
     model.eval()
-    iou_thresholds = [0.5]
+    iou_thresholds = np.arange(0.05, 0.55, 0.05)
     mean_ap, mean_ar, class_precisions, class_recalls = validate(model=model,
                                                                  data_loader=data_loader_val,
                                                                  class_names=class_names,
@@ -106,13 +119,14 @@ def main():
         "epochs": 100,
         "checkpoint": args.checkpoint
     }
-    metrics = {'mAP@50': mean_ap,
-               'mAR@50': mean_ar}
+    metrics = {'mAP@5:50': mean_ap,
+               'mAR@5:50': mean_ar}
     metrics.update(
         {str(class_name) + '_precision': class_precision for class_name, class_precision in class_precisions.items()})
     metrics.update(
         {str(class_name) + '_recall': class_recall for class_name, class_recall in class_recalls.items()})
-    figures = infer_and_plot_batch_predictions(model, data_loader_val, class_names, 5)
+    figures = infer_and_plot_batch_predictions(model, data_loader_val, {i + 1: c for (i, c) in enumerate(class_names)},
+                                               5)
     log_to_wandb(args.wandb_project_name, config, metrics, figures, args.checkpoint)
 
 

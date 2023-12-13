@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import torchvision
 
-from postprocessing import apply_nms
+from core.postprocessing import apply_nms
 
 
 def plot_image(image_tensor, bounding_box, show_plot=True):
@@ -32,14 +32,11 @@ def plot_image(image_tensor, bounding_box, show_plot=True):
     return fig
 
 
-def plot_predictions(image, prediction, gt, class_names=None, show_plot=True, nms_threshold: float = 0.1,
+def plot_predictions(image, prediction, gt=None, class_names=None, show_plot=True, nms_threshold: float = 0.1,
                      score_threshold: float = 0.2):
     boxes = prediction['boxes']
     scores = prediction['scores']
     labels = prediction['labels']
-
-    boxes_gt = gt['boxes'].cpu()
-    labels_gt = gt['labels'].cpu()
 
     keep = apply_nms(boxes, scores, nms_threshold, score_threshold)
     boxes = boxes.tolist()
@@ -67,18 +64,20 @@ def plot_predictions(image, prediction, gt, class_names=None, show_plot=True, nm
 
         # Add label and score to the bounding box
         ax.text(box[0], box[1], f'{label}: {score:.2f}', bbox=dict(facecolor='white', alpha=0.5))
+    if gt:
+        boxes_gt = gt['boxes'].cpu()
+        labels_gt = gt['labels'].cpu()
+        for box, label in zip(boxes_gt, labels_gt):
+            label = class_names[label]
+            # Create a Rectangle patch
+            rect = patches.Rectangle((box[0], box[1]), box[2] - box[0], box[3] - box[1], linewidth=1, edgecolor='g',
+                                     facecolor='none')
 
-    for box, label in zip(boxes_gt, labels_gt):
-        label = class_names[label]
-        # Create a Rectangle patch
-        rect = patches.Rectangle((box[0], box[1]), box[2] - box[0], box[3] - box[1], linewidth=1, edgecolor='g',
-                                 facecolor='none')
+            # Add the patch to the Axes
+            ax.add_patch(rect)
 
-        # Add the patch to the Axes
-        ax.add_patch(rect)
-
-        # Add label and score to the bounding box
-        ax.text(box[0], box[1], f'{label}: {1:.2f}', bbox=dict(facecolor='white', alpha=0.5))
+            # Add label and score to the bounding box
+            ax.text(box[0], box[1], f'{label}: {1:.2f}', bbox=dict(facecolor='white', alpha=0.5))
 
     plt.axis('off')
     if show_plot:
@@ -135,6 +134,7 @@ def plot_predictions_in_grid(images, predictions, ground_truths, class_names, n_
                     # Add label and score to the bounding box
                     ax.text(box[0], box[1], f'{label}: {score:.2f}', bbox=dict(facecolor='white', alpha=0.5))
 
+                labels_gt = labels_gt.tolist()
                 for box, label in zip(boxes_gt, labels_gt):
                     label = class_names[label]
                     # Create a Rectangle patch
