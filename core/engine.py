@@ -10,7 +10,7 @@ from metrics import calculate_ap_ar_map
 import time
 
 
-def validate(model, data_loader, class_names, device, iou_thresholds=None):
+def validate(model, data_loader, class_names, device='cpu', iou_thresholds=None):
     model.eval()
     model = model.to(device)
     if iou_thresholds is None:
@@ -44,7 +44,8 @@ def validate(model, data_loader, class_names, device, iou_thresholds=None):
     return mean_ap, mean_ar, all_class_precisions, all_class_recalls
 
 
-def train_epoch(model, optimizer, lr_scheduler, data_loader, device, print_freq=100, epoch_number=0, all_losses=None):
+def train_epoch(model, optimizer, data_loader, device='cpu', lr_scheduler=None, print_freq=100, epoch_number=0,
+                all_losses=None):
     model.train()
     local_losses = []
     device = torch.device(device)

@@ -6,19 +6,43 @@ import torch
 
 from core.engine import train_epoch
 from core.model import get_model
+from data.yolo_dataset import YOLODataset
+from vision.references.detection.utils import collate_fn
 
 
 class ClientFineTune:
-    def __init__(self, checkpoint=None, num_classes=5, optimizer=None,
-                 lr_scheduler=None, data_loader=None,
-                 device='cpu', server_address=None, server_port=None):
+    def __init__(self, image_path: str, annotation_path: str, label_file: str, checkpoint=None, num_classes=5,
+                 device='cpu',
+                 batch_size=2,
+                 learning_rate=0.0001,
+                 server_address=None,
+                 server_port=None):
         self.model = get_model(num_classes)
         self.checkpoint = checkpoint
         self.model.load_state_dict(torch.load(self.checkpoint, map_location=device)['model_state_dict'])
-        self.optimizer = optimizer
-        self.lr_scheduler = lr_scheduler
-        self.data_loader = data_loader
+
+        params = [p for p in self.model.parameters() if p.requires_grad]
+        self.optimizer = torch.optim.SGD(
+            params,
+            lr=learning_rate,
+            momentum=0.9,
+            weight_decay=0.0005
+        )
+
         self.device = device
+        self.batch_size = batch_size
+
+        dataset = YOLODataset(image_path=image_path,
+                              annotation_path=annotation_path,
+                              label_file=label_file,
+                              device=device)
+        self.data_loader = torch.utils.data.DataLoader(
+            dataset,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=1,
+            drop_last=True
+        )
 
         self.server_address = server_address
         self.server_port = server_port
@@ -86,8 +110,11 @@ class ClientFineTune:
             self.model.load_state_dict(torch.load(self.checkpoint, map_location=self.device)['model_state_dict'])
 
             print("Checkpoint loaded, training one epoch...")
-            train_epoch(self.model, self.optimizer, self.lr_scheduler,
-                        self.data_loader, self.device)
+            train_epoch(model=self.model,
+                        optimizer=self.optimizer,
+                        data_loader=self.data_loader,
+                        device=self.device)
+
             torch.save({
                 'model_state_dict': self.model.state_dict(),
             }, self.checkpoint)
