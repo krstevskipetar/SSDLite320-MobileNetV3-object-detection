@@ -172,9 +172,13 @@ def plot_metrics(metrics: dict):
 
     for key, ax in zip(metrics.keys(), axs):
         metric = metrics[key]
-        for k in metric.keys():
-            ax.scatter(k, metric[k])
-        values = [metric[k] for k in metric.keys()]
+        if isinstance(metric, dict):
+            for k in metric.keys():
+                ax.scatter(k, metric[k])
+            values = [metric[k] for k in metric.keys()]
+        else:
+            values = metric
+
         max_val = np.max(values), np.argmax(values) * 5
 
         ax.text(max_val[1], max_val[0] - 0.06, f'{key}: {max_val[0]:.4f}\n Epoch: {max_val[1]}')

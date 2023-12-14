@@ -90,7 +90,7 @@ def main():
     checkpoints = os.listdir(args.checkpoints_path)
     checkpoints.sort(key=lambda x: int(x.split('_')[1].split('.')[0]))
 
-    for checkpoint in checkpoints:
+    for checkpoint in checkpoints[:2]:
 
         model.load_state_dict(
             torch.load(os.path.join(args.checkpoints_path, checkpoint), map_location=device)['model_state_dict'])
@@ -129,8 +129,7 @@ def main():
         "detector": "SSDLite",
         "backbone": "MobileNetV3",
         "dataset": "waste-dataset-v2",
-        "epochs": 100,
-        "checkpoint": args.checkpoint
+        "epochs": 200
     }
     metrics = {'mAP@50': mean_aps,
                'mAR@50': mean_ars}
@@ -139,7 +138,7 @@ def main():
     metrics.update(
         {str(class_name) + '_recall': class_recall for class_name, class_recall in all_class_recalls.items()})
 
-    log_to_wandb(args.wandb_project_name, config, metrics, [], args.checkpoint)
+    log_to_wandb(args.wandb_project_name, config, metrics, [], '1-200')
 
 
 if __name__ == "__main__":
