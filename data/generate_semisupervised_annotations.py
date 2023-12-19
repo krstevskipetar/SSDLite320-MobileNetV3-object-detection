@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument('output_directory')
     parser.add_argument('--device', default='cpu')
     parser.add_argument('--num_classes', type=int, default=5)
-    parser.add_argument('--iou_threshold', type=float, default=0.5)
+    parser.add_argument('--iou_threshold', type=float, default=0.1)
     parser.add_argument('--score_threshold', type=float, default=0.2)
 
 
@@ -28,9 +28,12 @@ def infer_annotations(checkpoint, input_directory, output_directory, device='cpu
     model.eval()
     image_loader = ((img_name, torchvision.io.read_image(join(input_directory, img_name))) for img_name in
                     os.listdir(input_directory))
-
+    resize = torchvision.transforms.Resize(size=(320, 320), antialias=True)
     for img_name, img in image_loader:
-        predictions = model([img.float()])
+        img = resize(img)
+        torchvision.io.write_png(img, join(input_directory, img_name))  # write resized image
+
+        predictions = model([img.float() / 255])
 
         keep = apply_nms(predictions['boxes'], predictions['scores'], threshold=iou_threshold,
                          score_threshold=score_threshold)
@@ -40,7 +43,6 @@ def infer_annotations(checkpoint, input_directory, output_directory, device='cpu
         if device != 'cpu':
             kept_predictions['boxes'] = [box.cpu() for box in kept_predictions['boxes']]
             kept_predictions['labels'] = [label.cpu() for label in kept_predictions['labels']]
-
         file_name = join(output_directory, img_name.split('.')[0] + '.txt')
         with open(file_name, 'w') as f:
             for pred_box, pred_label in zip(kept_predictions['boxes'], kept_predictions['labels']):
