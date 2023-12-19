@@ -24,7 +24,7 @@ def parse_args():
 def infer_annotations(checkpoint, input_directory, output_directory, device='cpu', num_classes=5, iou_threshold=0.5,
                       score_threshold=0.2):
     model = get_model(num_classes=num_classes)
-    model.load_state_dict(torch.load(checkpoint, map_location=device))
+    model.load_state_dict(torch.load(checkpoint, map_location=device)['model_state_dict'])
     model.eval()
     image_loader = ((img_name, torchvision.io.read_image(join(input_directory, img_name))) for img_name in
                     os.listdir(input_directory))
@@ -33,7 +33,7 @@ def infer_annotations(checkpoint, input_directory, output_directory, device='cpu
         img = resize(img)
         torchvision.io.write_png(img, join(input_directory, img_name))  # write resized image
 
-        predictions = model([img.float() / 255])
+        predictions = model([img.float() / 255])[0]
 
         keep = apply_nms(predictions['boxes'], predictions['scores'], threshold=iou_threshold,
                          score_threshold=score_threshold)

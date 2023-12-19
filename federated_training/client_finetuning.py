@@ -15,15 +15,21 @@ class ClientFineTune:
     def __init__(self, image_path: str,
                  annotation_path: str,
                  label_file: str,
-                 checkpoint=None,
+                 checkpoint_directory=None,
                  num_classes=5,
                  device='cpu',
                  batch_size=2,
                  learning_rate=0.0001,
                  server_address=None,
-                 server_port=None):
+                 server_port=None,
+                 local_address='0.0.0.0',
+                 local_port=8080):
         self.model = get_model(num_classes)
-        self.checkpoint = checkpoint
+        self.checkpoint_directory = checkpoint_directory
+        self.checkpoint = 'checkpoint.pth'
+        self.local_address = local_address
+        self.local_port = local_port
+
 
         params = [p for p in self.model.parameters() if p.requires_grad]
         self.optimizer = torch.optim.SGD(
@@ -101,16 +107,17 @@ class ClientFineTune:
 
     def __call__(self, *args, **kwargs):
         while True:
-            if len(os.listdir(self.image_directory)) < 0:
+            print(os.path.abspath(self.image_directory))
+            if len(os.listdir(self.image_directory)) == 0:
                 print("No images yet!")
                 time.sleep(60)
                 continue
 
             print(f"Waiting for checkpoint from server at {self.server_address}:{self.server_port}...")
-            self.receive_from_server(self.server_address, self.server_port, self.checkpoint)
+            self.receive_from_server(self.local_address, self.local_port, self.checkpoint_directory)
 
             # infer annotations for input images
-            infer_annotations(checkpoint=self.checkpoint,
+            infer_annotations(checkpoint=os.path.join(self.checkpoint_directory,self.checkpoint),
                               input_directory=self.image_directory,
                               output_directory=self.annotation_directory,
                               device=self.device,
@@ -128,7 +135,8 @@ class ClientFineTune:
                 drop_last=True
             )
 
-            self.model.load_state_dict(torch.load(self.checkpoint, map_location=self.device)['model_state_dict'])
+            self.model.load_state_dict(torch.load(os.path.join(self.checkpoint_directory,self.checkpoint),
+                                                  map_location=self.device)['model_state_dict'])
 
             print("Checkpoint loaded, training one epoch...")
             train_epoch(model=self.model,
