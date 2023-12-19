@@ -2,7 +2,7 @@ import torch
 import torchvision.ops as ops
 from tqdm import tqdm
 import time
-from postprocessing import apply_nms
+from core.postprocessing import apply_nms
 
 
 def calculate_precision_recall(predictions, targets, iou_thresholds=None):

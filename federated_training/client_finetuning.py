@@ -6,12 +6,17 @@ import torch
 
 from core.engine import train_epoch
 from core.model import get_model
+from data.generate_semisupervised_annotations import infer_annotations
 from data.yolo_dataset import YOLODataset
 from vision.references.detection.utils import collate_fn
 
 
 class ClientFineTune:
-    def __init__(self, image_path: str, annotation_path: str, label_file: str, checkpoint=None, num_classes=5,
+    def __init__(self, image_path: str,
+                 annotation_path: str,
+                 label_file: str,
+                 checkpoint=None,
+                 num_classes=5,
                  device='cpu',
                  batch_size=2,
                  learning_rate=0.0001,
@@ -19,7 +24,6 @@ class ClientFineTune:
                  server_port=None):
         self.model = get_model(num_classes)
         self.checkpoint = checkpoint
-        self.model.load_state_dict(torch.load(self.checkpoint, map_location=device)['model_state_dict'])
 
         params = [p for p in self.model.parameters() if p.requires_grad]
         self.optimizer = torch.optim.SGD(
@@ -32,17 +36,10 @@ class ClientFineTune:
         self.device = device
         self.batch_size = batch_size
 
-        dataset = YOLODataset(image_path=image_path,
-                              annotation_path=annotation_path,
-                              label_file=label_file,
-                              device=device)
-        self.data_loader = torch.utils.data.DataLoader(
-            dataset,
-            batch_size=batch_size,
-            shuffle=True,
-            num_workers=1,
-            drop_last=True
-        )
+        self.image_directory = image_path
+        self.annotation_directory = annotation_path
+        self.num_classes = num_classes
+        self.label_file = label_file
 
         self.server_address = server_address
         self.server_port = server_port
@@ -104,9 +101,33 @@ class ClientFineTune:
 
     def __call__(self, *args, **kwargs):
         while True:
-            print(f"Waiting for checkpoint from server at {self.server_address}:{self.server_port}...")
+            if len(os.listdir(self.image_directory)) < 0:
+                print("No images yet!")
+                time.sleep(60)
+                continue
 
+            print(f"Waiting for checkpoint from server at {self.server_address}:{self.server_port}...")
             self.receive_from_server(self.server_address, self.server_port, self.checkpoint)
+
+            # infer annotations for input images
+            infer_annotations(checkpoint=self.checkpoint,
+                              input_directory=self.image_directory,
+                              output_directory=self.annotation_directory,
+                              device=self.device,
+                              num_classes=self.num_classes)
+
+            dataset = YOLODataset(image_path=self.image_directory,
+                                  annotation_path=self.annotation_directory,
+                                  label_file=self.label_file,
+                                  device=self.device)
+            self.data_loader = torch.utils.data.DataLoader(
+                dataset,
+                batch_size=self.batch_size,
+                shuffle=True,
+                num_workers=1,
+                drop_last=True
+            )
+
             self.model.load_state_dict(torch.load(self.checkpoint, map_location=self.device)['model_state_dict'])
 
             print("Checkpoint loaded, training one epoch...")

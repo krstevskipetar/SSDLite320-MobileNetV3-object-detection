@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import torchvision
 
-from postprocessing import apply_nms
+from core.postprocessing import apply_nms
 
 
 def plot_image(image_tensor, bounding_box, show_plot=True):
