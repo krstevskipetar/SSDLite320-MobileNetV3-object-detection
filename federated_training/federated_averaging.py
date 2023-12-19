@@ -26,7 +26,7 @@ class FedAvg:
 
         self.checkpoint = checkpoint
         self.global_model = get_model(num_classes=num_classes)
-        self.global_model.load_state_dict(torch.load(self.checkpoint, map_location='cpu'))
+        self.global_model.load_state_dict(torch.load(self.checkpoint, map_location='cpu')['model_state_dict'])
 
         self.output_dir = output_dir
         self.client_index = 0
@@ -105,7 +105,15 @@ class FedAvg:
         while True:
             for client_idx, client in enumerate(self.clients):
                 print(f"Sending global model to {client['address']}:{client['port']}")
-                self.send_file(client['address'], client['port'], self.checkpoint)
+                connected = False
+                while not connected:
+                    try:
+                        self.send_file(client['address'], client['port'], self.checkpoint)
+                        connected = True
+                    except ConnectionRefusedError as e:
+                        print(e)
+                        print("Client not available, waiting...")
+                        time.sleep(15)
 
             self.start_server(self.local_host, self.port, self.output_dir)
             while self.client_index < self.n_clients:

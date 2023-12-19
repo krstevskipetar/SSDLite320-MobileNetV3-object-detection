@@ -4,3 +4,5 @@
 /wandb/
 /batch_predictions/
 /local_data/
+/build/
+/ssdl_mn_v3.egg-info/
