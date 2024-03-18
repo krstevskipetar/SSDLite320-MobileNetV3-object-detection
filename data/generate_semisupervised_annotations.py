@@ -2,6 +2,7 @@ import argparse
 
 import torch
 import torchvision.io
+from tqdm import tqdm
 
 from core.model import get_model
 import os
@@ -19,17 +20,26 @@ def parse_args():
     parser.add_argument('--num_classes', type=int, default=5)
     parser.add_argument('--iou_threshold', type=float, default=0.1)
     parser.add_argument('--score_threshold', type=float, default=0.2)
+    return parser.parse_args()
 
 
 def infer_annotations(checkpoint, input_directory, output_directory, device='cpu', num_classes=5, iou_threshold=0.5,
                       score_threshold=0.2):
+    def bbox2yolobbox(bbox):
+        x1, y1, x2, y2 = bbox
+        x = (x1 + x2) / 2
+        y = (y1 + y2) / 2
+        w = (x2 - x1)
+        h = (y2 - y1)
+        return x/320, y/320, w/320, h/320
+
     model = get_model(num_classes=num_classes)
     model.load_state_dict(torch.load(checkpoint, map_location=device)['model_state_dict'])
     model.eval()
     image_loader = ((img_name, torchvision.io.read_image(join(input_directory, img_name))) for img_name in
                     os.listdir(input_directory))
     resize = torchvision.transforms.Resize(size=(320, 320), antialias=True)
-    for img_name, img in image_loader:
+    for img_name, img in tqdm(image_loader):
         img = resize(img)
         torchvision.io.write_png(img, join(input_directory, img_name))  # write resized image
 
@@ -48,9 +58,11 @@ def infer_annotations(checkpoint, input_directory, output_directory, device='cpu
             for pred_box, pred_label in zip(kept_predictions['boxes'], kept_predictions['labels']):
                 label = int(pred_label)
                 box = pred_box.tolist()
+                box = bbox2yolobbox(box)
                 f.write(f'{label} {box[0]} {box[1]} {box[2]} {box[3]}\n')
 
 
-def main(args):
+if __name__ == "__main__":
+    args = parse_args()
     infer_annotations(args.checkpoint, args.input_directory, args.output_directory, args.device, args.num_classes,
                       args.iou_threshold, args.score_threshold)

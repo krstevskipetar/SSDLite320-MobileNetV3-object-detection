@@ -32,6 +32,31 @@ def plot_image(image_tensor, bounding_box, show_plot=True):
     return fig
 
 
+def plot_image_multiple_boxes(image_tensor, bounding_boxes, labels, class_names, show_plot=True):
+    image_np = image_tensor.cpu().permute(1, 2, 0).numpy()
+
+    # Create figure and axes
+    fig, ax = plt.subplots(1)
+
+    # Display the image
+    ax.imshow(image_np)
+
+    for bounding_box, label in zip(bounding_boxes, labels):
+        # Create a Rectangle patch
+        x_min, y_min, x_max, y_max = bounding_box.cpu().int().tolist()
+        width = x_max - x_min
+        height = y_max - y_min
+        rect = patches.Rectangle((x_min, y_min), width, height, linewidth=1, edgecolor='g', facecolor='none')
+        # Add the patch to the Axes
+        ax.add_patch(rect)
+        ax.text(x_min, y_min, f'{class_names[label]}', bbox=dict(facecolor='white', alpha=0.5))
+
+    if show_plot:
+        plt.show()
+
+    return fig
+
+
 def plot_predictions(image, prediction, gt=None, class_names=None, show_plot=True, nms_threshold: float = 0.1,
                      score_threshold: float = 0.2):
     boxes = prediction['boxes']

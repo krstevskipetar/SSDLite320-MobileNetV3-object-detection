@@ -43,6 +43,7 @@ def parse_args():
     parser.add_argument('--wandb_project_name', default='SSDLite320-MobileNetV3 Waste Classification')
     return parser.parse_args()
 
+
 def create_unique_folder(base_path, prefix='_idx'):
     timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     folder_name = f"{prefix}{timestamp}"
@@ -52,9 +53,9 @@ def create_unique_folder(base_path, prefix='_idx'):
         os.makedirs(folder_path)
         return folder_path
 
+
 def run_training(data_loader_train, data_loader_val, model, optimizer, lr_scheduler, class_names,
                  num_epochs=100, device='cpu', print_freq=100, evaluate_every=5):
-
     checkpoint_path = create_unique_folder('checkpoints', 'run')
     all_losses = {}
     metrics = {key: [] for key in ['mAP@50', 'mAR@50']}
