@@ -7,8 +7,8 @@ import torch
 from core.engine import train_epoch
 from core.model import get_model
 from data.generate_semisupervised_annotations import infer_annotations
+from data.load_data import create_dataloader
 from data.yolo_dataset import YOLODataset
-from vision.references.detection.utils import collate_fn
 
 
 class ClientFineTune:
@@ -29,7 +29,6 @@ class ClientFineTune:
         self.checkpoint = 'checkpoint.pth'
         self.local_address = local_address
         self.local_port = local_port
-
 
         params = [p for p in self.model.parameters() if p.requires_grad]
         self.optimizer = torch.optim.SGD(
@@ -117,7 +116,7 @@ class ClientFineTune:
             self.receive_from_server(self.local_address, self.local_port, self.checkpoint_directory)
 
             # infer annotations for input images
-            infer_annotations(checkpoint=os.path.join(self.checkpoint_directory,self.checkpoint),
+            infer_annotations(checkpoint=os.path.join(self.checkpoint_directory, self.checkpoint),
                               input_directory=self.image_directory,
                               output_directory=self.annotation_directory,
                               device=self.device,
@@ -126,15 +125,14 @@ class ClientFineTune:
             dataset = YOLODataset(image_path=self.image_directory,
                                   annotation_path=self.annotation_directory,
                                   label_file=self.label_file)
-            self.data_loader = torch.utils.data.DataLoader(
+            self.data_loader = create_dataloader(
                 dataset,
                 batch_size=self.batch_size,
                 shuffle=True,
-                num_workers=1,
-                drop_last=True
+                num_workers=1
             )
 
-            self.model.load_state_dict(torch.load(os.path.join(self.checkpoint_directory,self.checkpoint),
+            self.model.load_state_dict(torch.load(os.path.join(self.checkpoint_directory, self.checkpoint),
                                                   map_location=self.device)['model_state_dict'])
 
             print("Checkpoint loaded, training one epoch...")

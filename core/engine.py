@@ -46,6 +46,8 @@ def validate(model, data_loader, class_names, device='cpu', iou_thresholds=None)
 
 def train_epoch(model, optimizer, data_loader, device='cpu', lr_scheduler=None, print_freq=100, epoch_number=0,
                 all_losses=None):
+    if all_losses is None:
+        all_losses = {}
     model.train()
     local_losses = []
     device = torch.device(device)

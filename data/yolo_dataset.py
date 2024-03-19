@@ -72,7 +72,7 @@ class YOLODataset(torch.utils.data.Dataset):
     def _validate_input(self):
         i = 0
         for idx, (image_file, annotation_file) in enumerate(zip(self.image_files, self.annotation_files)):
-            if not exists(join(self.image_path, image_file)) or not exists(join(self.image_path, image_file)):
+            if not exists(join(self.image_path, image_file)) or not exists(join(self.annotation_path, annotation_file)):
                 self.image_files.pop(idx)
                 self.annotation_files.pop(idx)
                 i += 1
