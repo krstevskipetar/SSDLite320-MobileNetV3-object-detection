@@ -1,17 +1,31 @@
+import argparse
 import os
 import shutil
 import socket
 import threading
 import time
+from os.path import join
 
 import torch
 
 from core.model import get_model
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Argument parser for FedAvg class")
+    parser.add_argument("--n_clients", type=int, default=0, help="Number of clients")
+    parser.add_argument("--clients", nargs='+', type=str, default=None, help="List of clients")
+    parser.add_argument("--checkpoint", type=str, default=None, help="Checkpoint file path")
+    parser.add_argument("--output_dir", type=str, default=None, help="Output directory path")
+    parser.add_argument("--port", type=int, default=8080, help="Port number")
+    parser.add_argument("--num_classes", type=int, default=5, help="Number of classes")
+    parser.add_argument("--learning_rate", type=float, default=0.001, help="Learning rate")
+    return parser.parse_args()
+
+
 class FedAvg:
     def __init__(self, n_clients: int = 0, clients: list[dict] = None, checkpoint: str = None,
-                 output_dir: str = None, local_host: str = '127.0.0.1', port: int = 8080,
+                 output_dir: str = None, port: int = 8080,
                  num_classes: int = 5, learning_rate: float = 0.001):
         """
 
@@ -31,7 +45,6 @@ class FedAvg:
         self.output_dir = output_dir
         self.client_index = 0
 
-        self.local_host = local_host
         self.port = port
 
     def start_server(self, host, port, output_directory):
@@ -42,17 +55,14 @@ class FedAvg:
             print(f"Server listening on {host}:{port}")
             while True and self.client_index < self.n_clients:
                 file_name = f'weights_{self.client_index}.pth'
-                self.client_index += 1
                 conn, addr = s.accept()
                 print(f"Connected by {addr}")
-
-                # Start a new thread to handle the connection
-                client_thread = threading.Thread(target=self.handle_client, args=(conn, output_directory, file_name))
-                client_thread.start()
+                self.handle_client(conn, output_directory, file_name)
 
     def handle_client(self, conn, output_directory, file_name):
         try:
             self.receive_file(conn, output_directory, file_name)
+            self.client_index += 1
         finally:
             conn.close()
 
@@ -115,12 +125,12 @@ class FedAvg:
                         print("Client not available, waiting...")
                         time.sleep(15)
 
-            self.start_server(self.local_host, self.port, self.output_dir)
+            self.start_server('0.0.0.0', self.port, self.output_dir)
             while self.client_index < self.n_clients:
                 time.sleep(10)
             for checkpoint in os.listdir(self.output_dir):
                 client_model = get_model(self.num_classes)
-                client_model.load_state_dict(torch.load(checkpoint, map_location='cpu'))
+                client_model.load_state_dict(torch.load(join(self.output_dir, checkpoint), map_location='cpu'))
                 self.server_update(client_model, self.learning_rate)
 
             shutil.rmtree(self.output_dir)
@@ -128,4 +138,17 @@ class FedAvg:
 
             torch.save({
                 'model_state_dict': self.global_model.state_dict(),
-            }, self.checkpoint)
+            }, join('local_data', 'global_model.pth'))
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    clients = []
+    for client in args.clients:
+        address, port = client.split(':')
+        clients.append({'address': address, 'port': int(port)})
+    print(clients)
+    fed_avg = FedAvg(n_clients=args.n_clients, clients=clients, checkpoint=args.checkpoint,
+                     output_dir=args.output_dir, port=args.port,
+                     num_classes=args.num_classes, learning_rate=args.learning_rate)
+    fed_avg()

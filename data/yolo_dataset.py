@@ -83,7 +83,7 @@ class YOLODataset(torch.utils.data.Dataset):
                     self.annotation_files.pop(idx)
                     self.image_files.pop(idx)
                     i += 1
-            except:
+            except IndexError:
                 self.image_files.pop(idx)
                 self.annotation_files.pop(idx)
                 i += 1
