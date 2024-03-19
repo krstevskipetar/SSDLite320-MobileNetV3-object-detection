@@ -37,7 +37,6 @@ def create_train_and_val_dataloaders(dataset_train, dataset_val, batch_size_trai
 def create_dataloader(dataset, batch_size, shuffle, num_workers):
     data_loader = torch.utils.data.DataLoader(
         dataset,
-        # Subset(dataset, random.sample([i for i in range(len(dataset))], 100)),
         batch_size=batch_size,
         shuffle=shuffle,
         num_workers=num_workers,

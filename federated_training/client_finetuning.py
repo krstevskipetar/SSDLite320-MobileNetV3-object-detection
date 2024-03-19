@@ -125,8 +125,7 @@ class ClientFineTune:
 
             dataset = YOLODataset(image_path=self.image_directory,
                                   annotation_path=self.annotation_directory,
-                                  label_file=self.label_file,
-                                  device=self.device)
+                                  label_file=self.label_file)
             self.data_loader = torch.utils.data.DataLoader(
                 dataset,
                 batch_size=self.batch_size,

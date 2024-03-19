@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument('--shuffle', action='store_true', default=False)
     parser.add_argument('--device', default='cpu')
     parser.add_argument('--checkpoint', default="checkpoints/checkpoints/epoch_99.pth")
-    parser.add_argument('--num_classes', type=int, default=4)
+    parser.add_argument('--num_classes', type=int, default=5)
     parser.add_argument('--wandb_logging', action='store_true', default=False)
     parser.add_argument('--wandb_project_name')
     argz = parser.parse_args()
@@ -70,13 +70,11 @@ def main():
     dataset_val = YOLODataset(image_path=args.image_path_val,
                               annotation_path=args.annotation_path_val,
                               label_file=args.label_file,
-                              shuffle=args.shuffle,
-                              device=args.device)
+                              shuffle=args.shuffle)
 
     data_loader_val = torch.utils.data.DataLoader(
         dataset_val,
-        # Subset(dataset, random.sample([i for i in range(len(dataset_val))], 100)),
-        batch_size=9,
+        batch_size=8,
         shuffle=False,
         num_workers=1,
         collate_fn=collate_fn,

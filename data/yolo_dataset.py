@@ -18,9 +18,8 @@ np.random.seed(42)
 
 class YOLODataset(torch.utils.data.Dataset):
     def __init__(self, image_path, annotation_path, label_file, transform=None, target_transforms=None, shuffle=False,
-                 resize_to=(320, 320), device='cpu'):
+                 resize_to=(320, 320)):
 
-        self.device = device
         self.image_path = image_path
         self.annotation_path = annotation_path
         self.transform = transform
@@ -120,16 +119,10 @@ class YOLODataset(torch.utils.data.Dataset):
             _boxes.append([x1, y1, x2, y2])
         boxes = np.array(_boxes)
 
-        labels = torch.tensor([int(l) for l in labels], device=self.device)
-        iscrowd = torch.zeros((len(labels),), dtype=torch.int64, device=self.device)
-        area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
-        area = torch.tensor(area, device=self.device)
+        labels = torch.tensor([int(l) for l in labels])
         target = {"boxes": tv_tensors.BoundingBoxes(boxes, format="XYXY",
-                                                    canvas_size=F.get_size(image),
-                                                    device=self.device),
+                                                    canvas_size=F.get_size(image)),
                   "labels": labels,
-                  "area": area,
-                  "iscrowd": iscrowd,
                   "image_id": image_id}
         return image, target
 
