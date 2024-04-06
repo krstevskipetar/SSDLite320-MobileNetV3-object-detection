@@ -1,6 +1,4 @@
-from federated_training.federated_averaging import FedAvg
 from federated_training.client_finetuning import ClientFineTune
-from data.generate_semisupervised_annotations import infer_annotations
 
 import argparse
 

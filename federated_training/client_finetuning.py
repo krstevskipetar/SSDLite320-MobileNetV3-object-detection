@@ -10,7 +10,8 @@ from data.generate_semisupervised_annotations import infer_annotations
 from data.load_data import create_dataloader
 from data.yolo_dataset import YOLODataset
 
-from distributed_comms import send_file, send_file_data, receive_file
+from federated_training.distributed_comms import send_file, receive_file
+
 
 class ClientFineTune:
     def __init__(self, image_path: str,
@@ -69,9 +70,9 @@ class ClientFineTune:
     def __call__(self, *args, **kwargs):
         print(os.path.abspath(self.image_directory))
         while len(os.listdir(self.image_directory)) == 0:
-                print("No images yet!")
-                time.sleep(60)
-                continue
+            print("No images yet!")
+            time.sleep(60)
+            continue
 
         print(f"Waiting for checkpoint from server at {self.server_address}:{self.server_port}...")
         self.receive_from_server(self.local_address, self.local_port, self.checkpoint_directory)

@@ -1,7 +1,6 @@
 import os
 import threading
 import socket
-import pdb
 import time
 
 
@@ -42,7 +41,7 @@ def receive_file(conn, output_directory, file_name):
     data = conn.recv(1024)
     file_size = int(data.decode('utf-8'))
 
-    print(f"Receiving file of size {file_size/1e6} MB")
+    print(f"Receiving file of size {file_size/1e6:.2f} MB")
 
     with open(file_name, 'wb') as file:
         while file_size > 0:
@@ -59,7 +58,7 @@ def send_file_data(conn, file_path):
     file_size = os.path.getsize(file_path)
     conn.sendall(str(file_size).encode('utf-8'))
     time.sleep(5)
-    print(f"Sending file of size {file_size/1e6} MB")
+    print(f"Sending file of size {file_size/1e6:.2f} MB")
 
     with open(file_path, 'rb') as file:
         while True:
