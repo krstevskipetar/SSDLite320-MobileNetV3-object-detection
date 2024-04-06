@@ -10,6 +10,7 @@ from data.generate_semisupervised_annotations import infer_annotations
 from data.load_data import create_dataloader
 from data.yolo_dataset import YOLODataset
 
+from distributed_comms import send_file, send_file_data, receive_file
 
 class ClientFineTune:
     def __init__(self, image_path: str,
@@ -49,45 +50,6 @@ class ClientFineTune:
         self.server_address = server_address
         self.server_port = server_port
 
-    def send_file(self, host, port, file_path):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((host, port))
-            self.send_file_data(s, file_path)
-            s.close()
-
-    def send_file_data(self, conn, file_path):
-        file_size = os.path.getsize(file_path)
-        conn.sendall(str(file_size).encode('utf-8'))
-        time.sleep(5)
-        print(f"Sending file of size {file_size} bytes")
-
-        with open(file_path, 'rb') as file:
-            while True:
-                data = file.read(1024)
-                if not data:
-                    break
-                conn.sendall(data)
-
-        print("File sent successfully")
-
-    def receive_file(self, conn, output_directory, file_name):
-        file_name = os.path.join(output_directory, file_name)
-        data = conn.recv(1024)
-        file_size = int(data.decode('utf-8'))
-
-        print(f"Receiving file of size {file_size} bytes")
-
-        with open(file_name, 'wb') as file:
-            while file_size > 0:
-                file.flush()
-                data = conn.recv(1024)
-                file.write(data)
-                file.flush()
-                file_size -= len(data)
-                print(f"Received {len(data)} bytes, remaining {file_size} bytes")
-
-        print("File received successfully")
-
     def receive_from_server(self, host, port, output_directory):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((host, port))
@@ -96,54 +58,53 @@ class ClientFineTune:
             conn, addr = s.accept()
             print(f"Connected by {addr}")
 
-            self.receive_file(conn, output_directory, self.checkpoint)
+            receive_file(conn, output_directory, self.checkpoint)
 
     def handle_client(self, conn, output_directory, file_name):
         try:
-            self.receive_file(conn, output_directory, file_name)
+            receive_file(conn, output_directory, file_name)
         finally:
             conn.close()
 
     def __call__(self, *args, **kwargs):
-        while True:
-            print(os.path.abspath(self.image_directory))
-            if len(os.listdir(self.image_directory)) == 0:
+        print(os.path.abspath(self.image_directory))
+        while len(os.listdir(self.image_directory)) == 0:
                 print("No images yet!")
                 time.sleep(60)
                 continue
 
-            print(f"Waiting for checkpoint from server at {self.server_address}:{self.server_port}...")
-            self.receive_from_server(self.local_address, self.local_port, self.checkpoint_directory)
+        print(f"Waiting for checkpoint from server at {self.server_address}:{self.server_port}...")
+        self.receive_from_server(self.local_address, self.local_port, self.checkpoint_directory)
 
-            # infer annotations for input images
-            infer_annotations(checkpoint=os.path.join(self.checkpoint_directory, self.checkpoint),
-                              input_directory=self.image_directory,
-                              output_directory=self.annotation_directory,
-                              device=self.device,
-                              num_classes=self.num_classes)
+        # infer annotations for input images
+        infer_annotations(checkpoint=os.path.join(self.checkpoint_directory, self.checkpoint),
+                          input_directory=self.image_directory,
+                          output_directory=self.annotation_directory,
+                          device=self.device,
+                          num_classes=self.num_classes)
 
-            dataset = YOLODataset(image_path=self.image_directory,
-                                  annotation_path=self.annotation_directory,
-                                  label_file=self.label_file)
-            self.data_loader = create_dataloader(
-                dataset,
-                batch_size=self.batch_size,
-                shuffle=True,
-                num_workers=1
-            )
+        dataset = YOLODataset(image_path=self.image_directory,
+                              annotation_path=self.annotation_directory,
+                              label_file=self.label_file)
+        self.data_loader = create_dataloader(
+            dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=1
+        )
 
-            self.model.load_state_dict(torch.load(os.path.join(self.checkpoint_directory, self.checkpoint),
-                                                  map_location=self.device)['model_state_dict'])
+        self.model.load_state_dict(torch.load(os.path.join(self.checkpoint_directory, self.checkpoint),
+                                              map_location=self.device)['model_state_dict'])
 
-            print("Checkpoint loaded, training one epoch...")
-            train_epoch(model=self.model,
-                        optimizer=self.optimizer,
-                        data_loader=self.data_loader,
-                        device=self.device)
+        print("Checkpoint loaded, training one epoch...")
+        train_epoch(model=self.model,
+                    optimizer=self.optimizer,
+                    data_loader=self.data_loader,
+                    device=self.device)
 
-            torch.save({
-                'model_state_dict': self.model.state_dict(),
-            }, self.checkpoint)
+        torch.save({
+            'model_state_dict': self.model.state_dict(),
+        }, self.checkpoint)
 
-            print(f"Training complete, sending checkpoint to server at {self.server_address}:{self.server_port}")
-            self.send_file(self.server_address, self.server_port, self.checkpoint)
+        print(f"Training complete, sending checkpoint to server at {self.server_address}:{self.server_port}")
+        send_file(self.server_address, self.server_port, self.checkpoint)
