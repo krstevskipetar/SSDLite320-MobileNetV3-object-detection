@@ -24,7 +24,9 @@ def parse_args():
 
 
 class FedAvg:
-    def __init__(self, n_clients: int = 0, clients: list[dict] = None, checkpoint: str = None,
+    def __init__(self, n_clients: int = 0, clients: list[dict] = None,
+                 device: str = 'cpu',
+                 checkpoint: str = None,
                  output_dir: str = None, port: int = 8080,
                  num_classes: int = 5, learning_rate: float = 0.001):
         """
@@ -37,6 +39,7 @@ class FedAvg:
         self.num_classes = num_classes
         self.n_clients = n_clients
         self.clients = clients
+        self.device = device
 
         self.checkpoint = checkpoint
         self.global_model = get_model(num_classes=num_classes)
@@ -130,7 +133,8 @@ class FedAvg:
                 time.sleep(10)
             for checkpoint in os.listdir(self.output_dir):
                 client_model = get_model(self.num_classes)
-                client_model.load_state_dict(torch.load(join(self.output_dir, checkpoint), map_location='cpu'))
+                checkpoint = torch.load(join(self.output_dir, checkpoint), map_location=self.device)
+                client_model.load_state_dict(checkpoint['model_state_dict'])
                 self.server_update(client_model, self.learning_rate)
 
             shutil.rmtree(self.output_dir)
