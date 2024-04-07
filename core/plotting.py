@@ -1,9 +1,6 @@
-import pickle
-
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import torchvision
+import matplotlib.pyplot as plt
+import numpy as np
 
 from core.postprocessing import apply_nms
 

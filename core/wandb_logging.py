@@ -1,5 +1,6 @@
-import core.plotting
 import wandb
+
+import core.plotting
 
 
 def log_to_wandb(project_name: str, config: dict, metrics: dict, figures: list, checkpoint_path: str):

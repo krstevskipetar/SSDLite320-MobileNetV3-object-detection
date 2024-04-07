@@ -1,13 +1,10 @@
 import argparse
 import os
-from os.path import join
 
 import matplotlib.pyplot as plt
-import torch
-import torchvision.io
 from tqdm import tqdm
-from core.plotting import plot_image_multiple_boxes
 
+from core.plotting import plot_image_multiple_boxes
 from data.load_data import load_dataset, create_dataloader, load_class_names
 
 

@@ -1,9 +1,8 @@
+import argparse
 import os
 import time
 
 from federated_training.client_finetuning import ClientFineTune
-
-import argparse
 
 
 def parse_arguments():

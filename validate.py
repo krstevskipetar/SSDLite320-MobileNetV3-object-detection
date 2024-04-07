@@ -1,20 +1,20 @@
+import argparse
 import os
+import random
 from datetime import datetime
 
+import numpy as np
+import torch
 from matplotlib import pyplot as plt
 from torch.utils.data import Subset
 
-from data.load_data import load_class_names
-from core.wandb_logging import log_to_wandb
-from vision.references.detection.utils import collate_fn
-from data.yolo_dataset import YOLODataset
-import torch
-import argparse
-from core.model import get_model
-import numpy as np
-import random
 from core.engine import validate
+from core.model import get_model
 from core.plotting import plot_predictions_in_grid
+from core.wandb_logging import log_to_wandb
+from data.load_data import load_class_names
+from data.yolo_dataset import YOLODataset
+from vision.references.detection.utils import collate_fn
 
 plt.ion()
 

@@ -9,7 +9,6 @@ from core.model import get_model
 from data.generate_semisupervised_annotations import infer_annotations
 from data.load_data import create_dataloader
 from data.yolo_dataset import YOLODataset
-
 from federated_training.distributed_comms import send_file, receive_file
 
 

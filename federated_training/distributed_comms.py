@@ -1,6 +1,6 @@
 import os
-import threading
 import socket
+import threading
 import time
 
 
@@ -36,12 +36,28 @@ def send_file(host, port, file_path):
         s.close()
 
 
+def send_file_data(conn, file_path):
+    file_size = os.path.getsize(file_path)
+    conn.sendall(str(file_size).encode('utf-8'))
+    time.sleep(5)
+    print(f"Sending file of size {file_size / 1e6} MB")
+
+    with open(file_path, 'rb') as file:
+        while True:
+            data = file.read(1024)
+            if not data:
+                break
+            conn.sendall(data)
+
+    print("File sent successfully")
+
+
 def receive_file(conn, output_directory, file_name):
     file_name = os.path.join(output_directory, file_name)
     data = conn.recv(1024)
     file_size = int(data.decode('utf-8'))
 
-    print(f"Receiving file of size {file_size/1e6:.2f} MB")
+    print(f"Receiving file of size {file_size / 1e6} MB")
 
     with open(file_name, 'wb') as file:
         while file_size > 0:
@@ -52,19 +68,3 @@ def receive_file(conn, output_directory, file_name):
             file_size -= len(data)
 
     print("File received successfully")
-
-
-def send_file_data(conn, file_path):
-    file_size = os.path.getsize(file_path)
-    conn.sendall(str(file_size).encode('utf-8'))
-    time.sleep(5)
-    print(f"Sending file of size {file_size/1e6:.2f} MB")
-
-    with open(file_path, 'rb') as file:
-        while True:
-            data = file.read(1024)
-            if not data:
-                break
-            conn.sendall(data)
-
-    print("File sent successfully")

@@ -1,10 +1,8 @@
-import socket
 import argparse
-import os
-import pdb
+import argparse
 import threading
 
-from distributed_comms import send_file, start_server
+from distributed_comms import start_server
 
 
 def parse_args():

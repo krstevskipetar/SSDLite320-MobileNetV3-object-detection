@@ -1,7 +1,5 @@
 import torch
-import torchvision.ops as ops
-from tqdm import tqdm
-import time
+
 from core.postprocessing import apply_nms
 
 

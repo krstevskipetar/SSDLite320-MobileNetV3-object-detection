@@ -1,13 +1,13 @@
 import math
 import sys
+import time
 
 import numpy as np
 import torch
 from tqdm import tqdm
 
-from vision.references.detection import utils
 from core.metrics import calculate_ap_ar_map
-import time
+from vision.references.detection import utils
 
 
 def validate(model, data_loader, class_names, device='cpu', iou_thresholds=None):
