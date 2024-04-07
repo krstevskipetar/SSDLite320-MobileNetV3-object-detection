@@ -71,7 +71,7 @@ class ClientFineTune:
         print(os.path.abspath(self.image_directory))
         while len(os.listdir(self.image_directory)) == 0:
             print("No images yet!")
-            time.sleep(60)
+            time.sleep(10)
             continue
 
         print(f"Waiting for checkpoint from server at {self.server_address}:{self.server_port}...")
