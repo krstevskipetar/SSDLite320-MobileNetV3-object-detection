@@ -47,7 +47,7 @@ def infer_annotations(checkpoint, input_directory, output_directory, device='cpu
     image_loader = ((img_name, torchvision.io.read_image(join(input_directory, img_name))) for img_name in
                     os.listdir(input_directory))
     resize = torchvision.transforms.Resize(size=(320, 320), antialias=True)
-    for img_name, img in tqdm(image_loader):
+    for img_name, img in tqdm(image_loader, total=len(os.listdir(input_directory))):
         img = resize(img)
         torchvision.io.write_png(img, join(input_directory, img_name))  # write resized image
 

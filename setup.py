@@ -5,8 +5,8 @@ setup(
     version='0.1.0',
     packages=find_packages(),
     install_requires=[
-        'torch == 2.1.0',
-        'torchvision == 0.16.0',
+        'torch == 2.3.0',
+        'torchvision == 0.18.0',
         'opencv-python == 4.8.1.78',
         'tqdm == 4.66.1',
         'numpy == 1.26.2',
