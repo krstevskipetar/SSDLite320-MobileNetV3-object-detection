@@ -18,7 +18,7 @@ if [ "$1" == "--infinite" ]; then
     INFINITE=true
 fi
 
-CMD="python infer.py $CHECKPOINT_PATH $INPUT_DIRECTORY $OUTPUT_DIRECTORY \
+CMD="python generate_semisupervised_annotations.py $CHECKPOINT_PATH $INPUT_DIRECTORY $OUTPUT_DIRECTORY \
     --sample_directory $SAMPLE_DIRECTORY --n_samples $N_SAMPLES --max_files $MAX_FILES \
     --pause_time $PAUSE_TIME --device $DEVICE --num_classes $NUM_CLASSES \
     --iou_threshold $IOU_THRESHOLD --score_threshold $SCORE_THRESHOLD"
