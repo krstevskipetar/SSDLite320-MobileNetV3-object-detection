@@ -20,15 +20,11 @@ setup(
         'wandb'
 
     ],
-    entry_points={
-        'console_scripts': [
-            # Add any command-line scripts here
-        ],
-    },
+
     author='Petar Krstevski',
     author_email='krstevski1petar@gmail.com',
     description='SSDLite320-MobileNetV3-object-detection',
-    long_description=open('README.md').read(),  # Assuming you have a README file
+    long_description=open('README.md').read(),
     url='https://github.com/krstevskipetar/SSDLite320-MobileNetV3-object-detection',
     classifiers=[
         'Programming Language :: Python :: 3',
