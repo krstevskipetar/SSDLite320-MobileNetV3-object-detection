@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CHECKPOINT_PATH="local_data/checkpoints/epoch_200.pth"
+CHECKPOINT_PATH="local_data/checkpoints/checkpoint.pth"
 INPUT_DIRECTORY="local_data/images"
 OUTPUT_DIRECTORY="local_data/annotations"
 SAMPLE_DIRECTORY="/home/petar/waste_dataset_v2/test/images"
@@ -12,7 +12,7 @@ NUM_CLASSES=5
 IOU_THRESHOLD=0.5
 SCORE_THRESHOLD=0.8
 INFINITE=false
-
+IGNORE_ANNOTATED=true
 # Check if the infinite flag is provided
 if [ "$1" == "--infinite" ]; then
     INFINITE=true
@@ -27,6 +27,8 @@ CMD="python data/generate_semisupervised_annotations.py $CHECKPOINT_PATH $INPUT_
 if [ "$INFINITE" = true ]; then
     CMD="$CMD --infinite"
 fi
-
+if [ "$IGNORE_ANNOTATED" = true ]; then
+    CMD="$CMD --ignore_annotated"
+fi
 # Run the command
 eval $CMD

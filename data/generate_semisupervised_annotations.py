@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument('input_directory')
     parser.add_argument('output_directory')
     parser.add_argument('--infinite', action='store_true')
+    parser.add_argument('--ignore_annotated', action='store_true')
     parser.add_argument('--sample_directory', type=str, default=None)
     parser.add_argument('--n_samples', type=int, default=100)
     parser.add_argument('--max_files', type=int, default=1000)
@@ -48,6 +49,9 @@ def infer_annotations(checkpoint, input_directory, output_directory, device='cpu
                     os.listdir(input_directory))
     resize = torchvision.transforms.Resize(size=(320, 320), antialias=True)
     for img_name, img in tqdm(image_loader, total=len(os.listdir(input_directory))):
+        file_name = join(output_directory, img_name.split('.')[0] + '.txt')
+        if os.path.isfile(file_name) and args.ignore_annotated:
+            continue
         img = resize(img)
         torchvision.io.write_png(img, join(input_directory, img_name))  # write resized image
 
@@ -61,7 +65,6 @@ def infer_annotations(checkpoint, input_directory, output_directory, device='cpu
         if device != 'cpu':
             kept_predictions['boxes'] = [box.cpu() for box in kept_predictions['boxes']]
             kept_predictions['labels'] = [label.cpu() for label in kept_predictions['labels']]
-        file_name = join(output_directory, img_name.split('.')[0] + '.txt')
         with open(file_name, 'w') as f:
             for pred_box, pred_label in zip(kept_predictions['boxes'], kept_predictions['labels']):
                 label = int(pred_label)
