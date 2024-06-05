@@ -4,12 +4,14 @@ import shutil
 import socket
 import sys
 import time
+import warnings
 from os.path import join
 
 import torch
 
 from core.model import get_model
 from federated_training.distributed_comms import send_file, receive_file
+from validate import run_validation
 
 
 def parse_args():
@@ -21,6 +23,9 @@ def parse_args():
     parser.add_argument("--port", type=int, default=8080, help="Port number")
     parser.add_argument("--num_classes", type=int, default=5, help="Number of classes")
     parser.add_argument("--learning_rate", type=float, default=0.001, help="Learning rate")
+    parser.add_argument('--validate', type=bool, action='store_true', default=False)
+    parser.add_argument('--image_path_val', type=str, default=None)
+    parser.add_argument('--annotation_path_val', type=str, default=None)
     return parser.parse_args()
 
 
@@ -32,7 +37,11 @@ class FedAvg:
                  output_dir: str = None,
                  port: int = 8080,
                  num_classes: int = 5,
-                 learning_rate: float = 0.001):
+                 learning_rate: float = 0.001,
+                 validate=True,
+                 image_path_val=None,
+                 annotation_path_val=None,
+                 label_file=None):
         """
 
         :param n_clients: Number of clients
@@ -44,7 +53,13 @@ class FedAvg:
         self.n_clients = n_clients
         self.clients = clients
         self.device = device
-
+        self.validate = validate
+        self.image_path_val = image_path_val
+        self.annotation_path_val = annotation_path_val
+        self.label_file = label_file
+        if self.image_path_val is None or self.annotation_path_val is None or self.label_file is None:
+            warnings.warn('validate=True specified but image path, annotation path and label file are not set!')
+            self.validate = False
         self.checkpoint = checkpoint
         self.global_model = get_model(num_classes=num_classes)
         self.global_model.load_state_dict(torch.load(self.checkpoint, map_location='cpu')['model_state_dict'])
@@ -112,6 +127,16 @@ class FedAvg:
             torch.save({
                 'model_state_dict': self.global_model.state_dict(),
             }, join('local_data', 'global_model.pth'))
+            if self.validate:
+                run_validation(checkpoint='local_data/global_model.pth',
+                               image_path_val=self.image_path_val,
+                               annotation_path_val=self.annotation_path_val,
+                               label_file=self.label_file,
+                               device=self.device,
+                               num_classes=self.num_classes,
+                               shuffle=True,
+                               wandb_logging=False,
+                               wandb_project_name=None)
             self.client_index = 0
 
 
@@ -124,5 +149,7 @@ if __name__ == "__main__":
     print(clients)
     fed_avg = FedAvg(n_clients=args.n_clients, clients=clients, checkpoint=args.checkpoint,
                      output_dir=args.output_dir, port=args.port,
-                     num_classes=args.num_classes, learning_rate=args.learning_rate)
+                     num_classes=args.num_classes, learning_rate=args.learning_rate,
+                     validate=args.validate, image_path_val=args.image_path_val,
+                     annotation_path_val=args.annotation_path_val)
     fed_avg()

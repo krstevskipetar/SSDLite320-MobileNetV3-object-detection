@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument('--checkpoint', default="checkpoints/checkpoints/epoch_99.pth")
     parser.add_argument('--num_classes', type=int, default=5)
     parser.add_argument('--wandb_logging', action='store_true', default=False)
-    parser.add_argument('--wandb_project_name')
+    parser.add_argument('--wandb_project_name', default=None)
     argz = parser.parse_args()
 
     return argz
@@ -62,15 +62,14 @@ def infer_and_plot_batch_predictions(model, data_loader_val, class_names, n_plot
     return figs
 
 
-def main():
-    args = parse_args()
+def run_validation(checkpoint, image_path_val, annotation_path_val, label_file, device='cpu', num_classes=5,
+                   shuffle=True, wandb_logging=False, wandb_project_name=None):
+    class_names = load_class_names(label_file)
 
-    class_names = load_class_names(args.label_file)
-
-    dataset_val = YOLODataset(image_path=args.image_path_val,
-                              annotation_path=args.annotation_path_val,
-                              label_file=args.label_file,
-                              shuffle=args.shuffle)
+    dataset_val = YOLODataset(image_path=image_path_val,
+                              annotation_path=annotation_path_val,
+                              label_file=label_file,
+                              shuffle=shuffle)
 
     data_loader_val = torch.utils.data.DataLoader(
         dataset_val,
@@ -80,11 +79,13 @@ def main():
         collate_fn=collate_fn,
         drop_last=True
     )
-    device = torch.device(args.device)
-    model = get_model(num_classes=args.num_classes)
-    if args.checkpoint:
-        model.load_state_dict(torch.load(args.checkpoint, map_location=device)['model_state_dict'])
+
+    device = torch.device(device)
+    model = get_model(num_classes=num_classes)
+    if checkpoint:
+        model.load_state_dict(torch.load(checkpoint, map_location=device)['model_state_dict'])
     model.eval()
+
     iou_thresholds = np.arange(0.05, 0.55, 0.05)
     mean_ap, mean_ar, class_precisions, class_recalls = validate(model=model,
                                                                  data_loader=data_loader_val,
@@ -102,30 +103,43 @@ def main():
     for key, value in class_recalls.items():
         print(f"\t-{key}: {value}")
 
-    config = {
-        "run_type": "validation",
-        "optimizer": "SGD",
-        "weight_decay": 0.0005,
-        "momentum": 0.9,
-        "lr_scheduler": "CosineAnnealingLR",
-        "T_max": 10,
-        "eta_min": 0,
-        "learning_rate": 0.001,
-        "detector": "SSDLite",
-        "backbone": "MobileNetV3",
-        "dataset": "waste-dataset-v2",
-        "epochs": 100,
-        "checkpoint": args.checkpoint
-    }
-    metrics = {'mAP@5:50': mean_ap,
-               'mAR@5:50': mean_ar}
-    metrics.update(
-        {str(class_name) + '_precision': class_precision for class_name, class_precision in class_precisions.items()})
-    metrics.update(
-        {str(class_name) + '_recall': class_recall for class_name, class_recall in class_recalls.items()})
-    figures = infer_and_plot_batch_predictions(model, data_loader_val, {i + 1: c for (i, c) in enumerate(class_names)},
-                                               5)
-    log_to_wandb(args.wandb_project_name, config, metrics, figures, args.checkpoint)
+    if wandb_logging:
+        config = {
+            "run_type": "validation",
+            "optimizer": "SGD",
+            "weight_decay": 0.0005,
+            "momentum": 0.9,
+            "lr_scheduler": "CosineAnnealingLR",
+            "T_max": 10,
+            "eta_min": 0,
+            "learning_rate": 0.001,
+            "detector": "SSDLite",
+            "backbone": "MobileNetV3",
+            "dataset": "waste-dataset-v2",
+            "epochs": 100,
+            "checkpoint": checkpoint
+        }
+        metrics = {'mAP@5:50': mean_ap,
+                   'mAR@5:50': mean_ar}
+        metrics.update(
+            {str(class_name) + '_precision': class_precision for class_name, class_precision in
+             class_precisions.items()})
+        metrics.update(
+            {str(class_name) + '_recall': class_recall for class_name, class_recall in class_recalls.items()})
+        figures = infer_and_plot_batch_predictions(model, data_loader_val,
+                                                   {i + 1: c for (i, c) in enumerate(class_names)},
+                                                   5)
+        if wandb_project_name:
+            log_to_wandb(wandb_project_name, config, metrics, figures, checkpoint)
+    return mean_ap, mean_ar, class_precisions, class_recalls
+
+
+def main():
+    args = parse_args()
+    _, _, _, _ = run_validation(args.checkpoint, args.image_path_val, args.annotation_path_val, args.label_file,
+                                args.device,
+                                args.num_classes, args.shuffle, args.wandb_logging,
+                                args.wandb_project_name)
 
 
 if __name__ == "__main__":
