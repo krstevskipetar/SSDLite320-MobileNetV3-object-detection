@@ -71,7 +71,7 @@ def infer_annotations(checkpoint, input_directory, output_directory, device='cpu
 
 
 def main(args):
-    if args.sample_directory is not None and len(os.listdir(args.input_directory) < args.max_files):
+    if args.sample_directory is not None and len(os.listdir(args.input_directory)) < args.max_files:
         sampled_files = random.sample(os.listdir(args.sample_directory), args.n_samples)
         for file in sampled_files:
             shutil.copy(join(args.sample_directory, file), join(args.input_directory, file))
