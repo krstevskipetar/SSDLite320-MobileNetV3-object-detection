@@ -2,14 +2,14 @@ import argparse
 from collections import OrderedDict
 from typing import List
 
+import flwr as fl
 import numpy as np
 import torch
-import flwr as fl
 
 from core.model import get_model
+from data.yolo_dataset import YOLODataset
 from vision.references.detection.engine import train_epoch, validate
 from vision.references.detection.utils import collate_fn
-from data.yolo_dataset import YOLODataset
 
 
 def get_parameters(model) -> List[np.ndarray]:

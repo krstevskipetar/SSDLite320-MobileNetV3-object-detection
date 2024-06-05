@@ -1,13 +1,11 @@
-import pdb
+import os
 import random
+from os.path import exists, join
 from typing import Sequence
 
 import numpy as np
-import torchvision.transforms
-import os
-from os.path import exists, join
-
 import torch.utils.data
+import torchvision.transforms
 from torchvision import tv_tensors
 from torchvision.io import read_image
 from torchvision.transforms.v2 import functional as F
@@ -82,7 +80,7 @@ class YOLODataset(torch.utils.data.Dataset):
                     self.annotation_files.pop(idx)
                     self.image_files.pop(idx)
                     i += 1
-            except IndexError:
+            except (IndexError, ValueError):
                 self.image_files.pop(idx)
                 self.annotation_files.pop(idx)
                 i += 1

@@ -6,3 +6,6 @@
 /local_data/
 /build/
 /ssdl_mn_v3.egg-info/
+/output_dir/
+/dist/
+/validation_results/

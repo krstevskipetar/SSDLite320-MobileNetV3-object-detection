@@ -1,18 +1,18 @@
+import argparse
 import os
+import random
 from datetime import datetime
 from os.path import join
 
+import numpy as np
+import torch
 from matplotlib import pyplot as plt
 
 from core.engine import validate, train_epoch
-from data.load_data import load_train_and_val_datasets, create_train_and_val_dataloaders, load_class_names
-from core.wandb_logging import log_to_wandb
-from validate import infer_and_plot_batch_predictions
-import torch
-import argparse
 from core.model import get_model
-import numpy as np
-import random
+from core.wandb_logging import log_to_wandb
+from data.load_data import load_train_and_val_datasets, create_train_and_val_dataloaders, load_class_names
+from validate import infer_and_plot_batch_predictions
 
 # from vision.references.detection.engine import evaluate, train_epoch
 

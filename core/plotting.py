@@ -1,9 +1,6 @@
-import pickle
-
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import torchvision
+import matplotlib.pyplot as plt
+import numpy as np
 
 from core.postprocessing import apply_nms
 
@@ -195,7 +192,7 @@ def plot_metrics(metrics: dict):
     n_rows, n_columns = calculate_dimensions(len(metrics.keys()))
     fig, axs = plt.subplots(n_rows, n_columns, layout="constrained")
 
-    for key, ax in zip(metrics.keys(), axs):
+    for key, ax in zip(metrics.keys(), axs.flatten()):
         metric = metrics[key]
         for k in metric.keys():
             ax.scatter(k, metric[k])

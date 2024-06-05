@@ -1,13 +1,12 @@
 import argparse
+import os
+from os.path import join
 
 import torch
 import torchvision.io
 from tqdm import tqdm
 
 from core.model import get_model
-import os
-from os.path import join
-
 from core.postprocessing import apply_nms
 
 
