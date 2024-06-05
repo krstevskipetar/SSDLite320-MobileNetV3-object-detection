@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Run the Python script
 python validate_all_epochs.py \
     --image_path_val '/home/petar/waste_dataset_v2_refactored/val/images' \
     --annotation_path_val '/home/petar/waste_dataset_v2_refactored/val/labels' \
