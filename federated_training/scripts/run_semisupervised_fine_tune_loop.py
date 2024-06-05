@@ -32,7 +32,8 @@ def main(args):
         client_ft = ClientFineTune(image_path=args.input_img_directory,
                                    annotation_path=args.output_annotation_directory,
                                    device=args.device, num_classes=args.num_classes,
-                                   checkpoint_directory=args.checkpoint_directory, label_file=args.label_file,
+                                   checkpoint_directory=args.checkpoint_directory,
+                                   label_file=args.label_file,
                                    server_address=args.server_address,
                                    server_port=args.server_port)
         client_ft()
