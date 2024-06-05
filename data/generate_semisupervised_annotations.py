@@ -1,6 +1,9 @@
 import argparse
 import os
+import shutil
+import time
 from os.path import join
+import random
 
 import torch
 import torchvision.io
@@ -15,10 +18,16 @@ def parse_args():
     parser.add_argument('checkpoint')
     parser.add_argument('input_directory')
     parser.add_argument('output_directory')
+    parser.add_argument('--infinite', action='store_true')
+    parser.add_argument('--sample_directory', type=str, default=None)
+    parser.add_argument('--n_samples', type=int, default=100)
+    parser.add_argument('--max_files', type=int, default=1000)
+    parser.add_argument('--pause_time', type=int, default=60,
+                        help='Time to pause between sampling/inference steps, only valid when infinite=True')
     parser.add_argument('--device', default='cpu')
     parser.add_argument('--num_classes', type=int, default=5)
-    parser.add_argument('--iou_threshold', type=float, default=0.1)
-    parser.add_argument('--score_threshold', type=float, default=0.2)
+    parser.add_argument('--iou_threshold', type=float, default=0.5)
+    parser.add_argument('--score_threshold', type=float, default=0.8)
     return parser.parse_args()
 
 
@@ -30,7 +39,7 @@ def infer_annotations(checkpoint, input_directory, output_directory, device='cpu
         y = (y1 + y2) / 2
         w = (x2 - x1)
         h = (y2 - y1)
-        return x/320, y/320, w/320, h/320
+        return x / 320, y / 320, w / 320, h / 320
 
     model = get_model(num_classes=num_classes)
     model.load_state_dict(torch.load(checkpoint, map_location=device)['model_state_dict'])
@@ -61,7 +70,20 @@ def infer_annotations(checkpoint, input_directory, output_directory, device='cpu
                 f.write(f'{label} {box[0]} {box[1]} {box[2]} {box[3]}\n')
 
 
-if __name__ == "__main__":
-    args = parse_args()
+def main(args):
+    if args.sample_directory is not None and len(os.listdir(args.input_directory) < args.max_files):
+        sampled_files = random.sample(os.listdir(args.sample_directory), args.n_samples)
+        for file in sampled_files:
+            shutil.copy(join(args.sample_directory, file), join(args.input_directory, file))
     infer_annotations(args.checkpoint, args.input_directory, args.output_directory, args.device, args.num_classes,
                       args.iou_threshold, args.score_threshold)
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    if args.infinite:
+        while True:
+            main(args)
+            time.sleep(args.pause_time)
+    else:
+        main(args)
