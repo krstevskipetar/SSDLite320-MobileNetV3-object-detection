@@ -1,5 +1,6 @@
 import argparse
 import os
+import pickle
 import shutil
 import socket
 import sys
@@ -8,6 +9,7 @@ import warnings
 from os.path import join
 
 import torch
+from matplotlib import pyplot as plt
 
 from core.model import get_model
 from federated_training.distributed_comms import send_file, receive_file
@@ -105,6 +107,7 @@ class FedAvg:
 
     def __call__(self, *args, **kwargs):
         step = 0
+        mean_aps, mean_ars = [], []
         while True:
             for client_idx, client in enumerate(self.clients):
                 print(f"Sending global model to {client['address']}:{client['port']}")
@@ -147,6 +150,21 @@ class FedAvg:
             if step > self.steps:
                 print(f"{step} steps reached, stopping server.")
                 break
+        if self.validate:
+            plt.figure(figsize=(10, 6))
+            plt.plot(range(1, len(mean_aps) + 1), mean_aps, label='Mean Average Precision', marker='o')
+            plt.xlabel('Epochs')
+            plt.ylabel('Mean Average Precision')
+            plt.title('Mean Average Precision over Epochs')
+            plt.legend()
+            plt.grid(True)
+            plt.savefig('mean_aps.png')
+
+            with open('mean_aps.pkl', 'wb') as f:
+                pickle.dump(mean_aps, f)
+            with open('mean_ars.pkl', 'wb') as f:
+                pickle.dump(mean_ars, f)
+
 
 
 if __name__ == "__main__":
