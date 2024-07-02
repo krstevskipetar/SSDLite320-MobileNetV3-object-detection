@@ -18,6 +18,8 @@ def parse_arguments():
     parser.add_argument('--iou_threshold', type=float, default=0.5)
     parser.add_argument('--score_threshold', type=float, default=0.2)
     parser.add_argument('--steps', type=int, default=100)
+    parser.add_argument('--batch_size', type=int, default=100)
+    parser.add_argument('--reuse_images', action='store_true', default=False)
     return parser.parse_args()
 
 
@@ -41,7 +43,7 @@ def main(args):
         step += 1
         if step > args.steps:
             break
-        while os.listdir(args.input_img_directory) == image_set:
+        while os.listdir(args.input_img_directory) == image_set and args.reuse_images:
             print("Waiting on new images...")
             time.sleep(10)
 

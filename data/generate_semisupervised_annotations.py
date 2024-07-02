@@ -33,7 +33,7 @@ def parse_args():
 
 
 def infer_annotations(checkpoint, input_directory, output_directory, device='cpu', num_classes=5, iou_threshold=0.5,
-                      score_threshold=0.2):
+                      score_threshold=0.2, ignore_annotated=False):
     def bbox2yolobbox(bbox):
         x1, y1, x2, y2 = bbox
         x = (x1 + x2) / 2
@@ -50,7 +50,7 @@ def infer_annotations(checkpoint, input_directory, output_directory, device='cpu
     resize = torchvision.transforms.Resize(size=(320, 320), antialias=True)
     for img_name, img in tqdm(image_loader, total=len(os.listdir(input_directory))):
         file_name = join(output_directory, img_name.split('.')[0] + '.txt')
-        if os.path.isfile(file_name) and args.ignore_annotated:
+        if os.path.isfile(file_name) and ignore_annotated:
             continue
         img = resize(img)
         torchvision.io.write_png(img, join(input_directory, img_name))  # write resized image
@@ -79,7 +79,7 @@ def main(args):
         for file in sampled_files:
             shutil.copy(join(args.sample_directory, file), join(args.input_directory, file))
     infer_annotations(args.checkpoint, args.input_directory, args.output_directory, args.device, args.num_classes,
-                      args.iou_threshold, args.score_threshold)
+                      args.iou_threshold, args.score_threshold, args.ignore_annotated)
 
 
 if __name__ == "__main__":

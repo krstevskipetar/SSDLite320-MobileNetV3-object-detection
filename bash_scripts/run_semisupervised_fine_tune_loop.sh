@@ -4,4 +4,5 @@
   --label_file local_data/label_file.txt \
   --server_address 192.168.100.14 \
   --server_port 8080\
-  --steps 10
+  --steps 10 \
+  --reuse_images
