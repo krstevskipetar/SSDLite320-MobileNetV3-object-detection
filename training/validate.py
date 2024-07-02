@@ -51,7 +51,7 @@ def create_unique_folder(base_path, prefix='_idx'):
 
 def infer_and_plot_batch_predictions(model, data_loader_val, class_names, n_plots=5):
     figs = []
-    run = create_unique_folder("batch_predictions")
+    run = create_unique_folder("../batch_predictions")
     for idx, (images, targets) in enumerate(data_loader_val):
         predictions = model(images)
         fig = plot_predictions_in_grid(images, predictions, targets, class_names, show_plot=False)

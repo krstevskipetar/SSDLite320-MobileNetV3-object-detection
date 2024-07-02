@@ -17,10 +17,12 @@ def parse_arguments():
     parser.add_argument('--num_classes', type=int, default=5)
     parser.add_argument('--iou_threshold', type=float, default=0.5)
     parser.add_argument('--score_threshold', type=float, default=0.2)
+    parser.add_argument('--steps', type=int, default=100)
     return parser.parse_args()
 
 
 def main(args):
+    step = 0
     while True:
         print(os.listdir(args.input_img_directory))
         while len(os.listdir(args.input_img_directory)) == 0:
@@ -36,7 +38,9 @@ def main(args):
                                    server_address=args.server_address,
                                    server_port=args.server_port)
         client_ft()
-
+        step += 1
+        if step > args.steps:
+            break
         while os.listdir(args.input_img_directory) == image_set:
             print("Waiting on new images...")
             time.sleep(10)

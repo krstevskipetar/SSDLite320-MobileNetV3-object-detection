@@ -11,7 +11,7 @@ import torch
 
 from core.model import get_model
 from federated_training.distributed_comms import send_file, receive_file
-from validate import run_validation
+from training.validate import run_validation
 
 
 def parse_args():
@@ -23,9 +23,10 @@ def parse_args():
     parser.add_argument("--port", type=int, default=8080, help="Port number")
     parser.add_argument("--num_classes", type=int, default=5, help="Number of classes")
     parser.add_argument("--learning_rate", type=float, default=0.001, help="Learning rate")
-    parser.add_argument('--validate', type=bool, action='store_true', default=False)
+    parser.add_argument('--validate', action='store_true', default=False)
     parser.add_argument('--image_path_val', type=str, default=None)
     parser.add_argument('--annotation_path_val', type=str, default=None)
+    parser.add_argument('--label_file', type=str, default=None)
     return parser.parse_args()
 
 
@@ -38,10 +39,11 @@ class FedAvg:
                  port: int = 8080,
                  num_classes: int = 5,
                  learning_rate: float = 0.001,
-                 validate=True,
-                 image_path_val=None,
-                 annotation_path_val=None,
-                 label_file=None):
+                 validate: bool = True,
+                 image_path_val: str = None,
+                 annotation_path_val: str = None,
+                 label_file: str = None,
+                 steps: int = 100):
         """
 
         :param n_clients: Number of clients
@@ -69,6 +71,7 @@ class FedAvg:
 
         self.port = port
         self.receiving_socket = None
+        self.steps = steps
 
     def receive_client_weights(self):
         if self.receiving_socket is None:
@@ -101,6 +104,7 @@ class FedAvg:
                 global_param.data.add_(update)
 
     def __call__(self, *args, **kwargs):
+        step = 0
         while True:
             for client_idx, client in enumerate(self.clients):
                 print(f"Sending global model to {client['address']}:{client['port']}")
@@ -128,16 +132,21 @@ class FedAvg:
                 'model_state_dict': self.global_model.state_dict(),
             }, join('local_data', 'global_model.pth'))
             if self.validate:
-                run_validation(checkpoint='local_data/global_model.pth',
-                               image_path_val=self.image_path_val,
-                               annotation_path_val=self.annotation_path_val,
-                               label_file=self.label_file,
-                               device=self.device,
-                               num_classes=self.num_classes,
-                               shuffle=True,
-                               wandb_logging=False,
-                               wandb_project_name=None)
+                mean_ap, mean_ar, class_precisions, class_recalls = run_validation(
+                    checkpoint='local_data/global_model.pth',
+                    image_path_val=self.image_path_val,
+                    annotation_path_val=self.annotation_path_val,
+                    label_file=self.label_file,
+                    device=self.device,
+                    num_classes=self.num_classes,
+                    shuffle=True,
+                    wandb_logging=False,
+                    wandb_project_name=None)
             self.client_index = 0
+            step += 1
+            if step > self.steps:
+                print(f"{step} steps reached, stopping server.")
+                break
 
 
 if __name__ == "__main__":
@@ -145,6 +154,7 @@ if __name__ == "__main__":
     clients = []
     for client in args.clients:
         address, port = client.split(':')
+        port = port.strip(',')
         clients.append({'address': address, 'port': int(port)})
     print(clients)
     fed_avg = FedAvg(n_clients=args.n_clients, clients=clients, checkpoint=args.checkpoint,
