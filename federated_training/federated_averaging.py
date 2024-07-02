@@ -29,6 +29,7 @@ def parse_args():
     parser.add_argument('--image_path_val', type=str, default=None)
     parser.add_argument('--annotation_path_val', type=str, default=None)
     parser.add_argument('--label_file', type=str, default=None)
+    parser.add_argument('--steps', type=int, default=100)
     return parser.parse_args()
 
 
@@ -159,12 +160,12 @@ class FedAvg:
             plt.legend()
             plt.grid(True)
             plt.savefig('mean_aps.png')
+            plt.show()
 
             with open('mean_aps.pkl', 'wb') as f:
                 pickle.dump(mean_aps, f)
             with open('mean_ars.pkl', 'wb') as f:
                 pickle.dump(mean_ars, f)
-
 
 
 if __name__ == "__main__":
@@ -179,5 +180,6 @@ if __name__ == "__main__":
                      output_dir=args.output_dir, port=args.port,
                      num_classes=args.num_classes, learning_rate=args.learning_rate,
                      validate=args.validate, image_path_val=args.image_path_val,
-                     annotation_path_val=args.annotation_path_val)
+                     annotation_path_val=args.annotation_path_val,
+                     steps=args.steps)
     fed_avg()

@@ -10,7 +10,7 @@ learning_rate=0.001
 image_path_val='/home/petar/waste_dataset_v2/val/images'
 annotation_path_val='/home/petar/waste_dataset_v2/val/annotations'
 label_file='/home/petar/waste_dataset_v2/label_map.txt'
-
+steps=10
 python federated_training/federated_averaging.py  --n_clients $n_clients \
                         --clients "${clients[@]}" \
                         --checkpoint $checkpoint \
@@ -20,5 +20,6 @@ python federated_training/federated_averaging.py  --n_clients $n_clients \
                         --learning_rate $learning_rate \
                         --image_path_val $image_path_val \
                         --annotation_path_val $annotation_path_val \
-                        --label_file $label_file
+                        --label_file $label_file \
+                        --steps $steps
 
