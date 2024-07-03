@@ -104,10 +104,10 @@ class ClientFineTune:
                                               map_location=self.device)['model_state_dict'])
 
         print("Checkpoint loaded, training one epoch...")
-        train_epoch(model=self.model,
-                    optimizer=self.optimizer,
-                    data_loader=self.data_loader,
-                    device=self.device)
+        all_losses, mean_loss = train_epoch(model=self.model,
+                                            optimizer=self.optimizer,
+                                            data_loader=self.data_loader,
+                                            device=self.device)
 
         torch.save({
             'model_state_dict': self.model.state_dict(),
@@ -119,4 +119,4 @@ class ClientFineTune:
         send_file(self.server_address, self.server_port, self.checkpoint)
         end_transfer_2 = perf_counter()
         transfer_time_2 = end_transfer_2 - start_transfer_2
-        return transfer_time, transfer_time_2, inference_time, training_time
+        return transfer_time, transfer_time_2, inference_time, training_time, all_losses, mean_loss

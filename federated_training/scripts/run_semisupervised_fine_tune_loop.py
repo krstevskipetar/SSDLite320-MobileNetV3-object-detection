@@ -30,6 +30,8 @@ def main(args):
     client_to_server_transfer_times = []
     training_times = []
     inference_times = []
+    all_steps_losses = []
+    all_steps_mean_losses = []
 
     while True:
         print(os.listdir(args.input_img_directory))
@@ -45,7 +47,9 @@ def main(args):
                                    label_file=args.label_file,
                                    server_address=args.server_address,
                                    server_port=args.server_port)
-        transfer_time, transfer_time_2, inference_time, training_time = client_ft()
+        transfer_time, transfer_time_2, inference_time, training_time, all_losses, mean_loss = client_ft()
+        all_steps_losses.append(all_losses)
+        all_steps_mean_losses.append(mean_loss)
         server_to_client_transfer_times.append(transfer_time)
         client_to_server_transfer_times.append(transfer_time_2)
         training_times.append(training_time)
@@ -58,14 +62,20 @@ def main(args):
         while os.listdir(args.input_img_directory) == image_set and not args.reuse_images:
             print("Waiting on new images...")
             time.sleep(10)
-    with open('training_times.pkl', 'wb') as f:
+    if not os.path.exists('finetune_data'):
+        os.mkdir('finetune_data')
+    with open('finetune_data/training_times.pkl', 'wb') as f:
         pickle.dump(training_times, f)
-    with open('inference_times.pkl', 'wb') as f:
+    with open('finetune_data/inference_times.pkl', 'wb') as f:
         pickle.dump(inference_times, f)
-    with open('client_to_server_transfer_times.pkl', 'wb') as f:
+    with open('finetune_data/client_to_server_transfer_times.pkl', 'wb') as f:
         pickle.dump(client_to_server_transfer_times, f)
-    with open('server_to_client_transfer_times.pkl', 'wb') as f:
+    with open('finetune_data/server_to_client_transfer_times.pkl', 'wb') as f:
         pickle.dump(server_to_client_transfer_times, f)
+    with open('finetune_data/all_steps_losses.pkl', 'wb') as f:
+        pickle.dump(all_steps_losses, f)
+    with open('finetune_data/all_steps_mean_losses.pkl', 'wb') as f:
+        pickle.dump(all_steps_mean_losses, f)
 
 
 if __name__ == '__main__':

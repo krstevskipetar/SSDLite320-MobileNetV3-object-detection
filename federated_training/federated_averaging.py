@@ -87,7 +87,8 @@ class FedAvg:
                 sys.exit(socket.SO_ERROR)
 
         print(f"Server listening on 0.0.0.0:{self.port}")
-        while True and self.client_index < self.n_clients:
+        while True and self.client_index <= self.n_clients:
+            print("Servicing client ", self.client_index)
             file_name = f'weights_{self.client_index}.pth'
             conn, addr = self.receiving_socket.accept()
             print(f"Connected by {addr}")
@@ -122,7 +123,6 @@ class FedAvg:
                         print("Client not available, waiting...")
                         time.sleep(15)
             self.receive_client_weights()
-
             for checkpoint in os.listdir(self.output_dir):
                 client_model = get_model(self.num_classes)
                 checkpoint = torch.load(join(self.output_dir, checkpoint), map_location=self.device)
@@ -146,6 +146,8 @@ class FedAvg:
                     shuffle=True,
                     wandb_logging=False,
                     wandb_project_name=None)
+                mean_aps.append(mean_ap)
+                mean_ars.append(mean_ar)
             self.client_index = 0
             step += 1
             if step > self.steps:
