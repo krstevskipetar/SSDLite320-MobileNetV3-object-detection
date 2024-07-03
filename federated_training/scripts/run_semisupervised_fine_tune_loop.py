@@ -55,7 +55,7 @@ def main(args):
         step += 1
         if step > args.steps:
             break
-        while os.listdir(args.input_img_directory) == image_set and args.reuse_images:
+        while os.listdir(args.input_img_directory) == image_set and not args.reuse_images:
             print("Waiting on new images...")
             time.sleep(10)
     with open('training_times.pkl', 'wb') as f:
