@@ -10,6 +10,7 @@ from data.generate_semisupervised_annotations import infer_annotations
 from data.load_data import create_dataloader
 from data.yolo_dataset import YOLODataset
 from federated_training.distributed_comms import send_file, receive_file
+from time import perf_counter
 
 
 class ClientFineTune:
@@ -73,16 +74,22 @@ class ClientFineTune:
             time.sleep(10)
             continue
 
+        start_transfer = perf_counter()
         print(f"Waiting for checkpoint from server at {self.server_address}:{self.server_port}...")
         self.receive_from_server(self.local_address, self.local_port, self.checkpoint_directory)
+        end_transfer = perf_counter()
+        transfer_time = end_transfer - start_transfer
 
+        start_inference = perf_counter()
         # infer annotations for input images
         infer_annotations(checkpoint=os.path.join(self.checkpoint_directory, self.checkpoint),
                           input_directory=self.image_directory,
                           output_directory=self.annotation_directory,
                           device=self.device,
                           num_classes=self.num_classes)
-
+        end_inference = perf_counter()
+        inference_time = end_inference - start_inference
+        start_training = perf_counter()
         dataset = YOLODataset(image_path=self.image_directory,
                               annotation_path=self.annotation_directory,
                               label_file=self.label_file)
@@ -105,6 +112,11 @@ class ClientFineTune:
         torch.save({
             'model_state_dict': self.model.state_dict(),
         }, self.checkpoint)
-
+        end_training = perf_counter()
+        training_time = end_training - start_training
         print(f"Training complete, sending checkpoint to server at {self.server_address}:{self.server_port}")
+        start_transfer_2 = perf_counter()
         send_file(self.server_address, self.server_port, self.checkpoint)
+        end_transfer_2 = perf_counter()
+        transfer_time_2 = end_transfer_2 - start_transfer_2
+        return transfer_time, transfer_time_2, inference_time, training_time

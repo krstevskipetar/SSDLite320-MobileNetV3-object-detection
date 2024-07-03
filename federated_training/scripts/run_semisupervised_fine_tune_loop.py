@@ -1,5 +1,6 @@
 import argparse
 import os
+import pickle
 import time
 
 from federated_training.client_finetuning import ClientFineTune
@@ -25,6 +26,11 @@ def parse_arguments():
 
 def main(args):
     step = 0
+    server_to_client_transfer_times = []
+    client_to_server_transfer_times = []
+    training_times = []
+    inference_times = []
+
     while True:
         print(os.listdir(args.input_img_directory))
         while len(os.listdir(args.input_img_directory)) == 0:
@@ -39,13 +45,27 @@ def main(args):
                                    label_file=args.label_file,
                                    server_address=args.server_address,
                                    server_port=args.server_port)
-        client_ft()
+        transfer_time, transfer_time_2, inference_time, training_time = client_ft()
+        server_to_client_transfer_times.append(transfer_time)
+        client_to_server_transfer_times.append(transfer_time_2)
+        training_times.append(training_time)
+        inference_times.append(inference_time)
+        print(f"Transfer time: {transfer_time:.2f} seconds, {transfer_time_2:.2f} seconds ")
+        print(f"Training time: {training_time:.2f} seconds, Inference time: {inference_time:.2f} seconds ")
         step += 1
         if step > args.steps:
             break
         while os.listdir(args.input_img_directory) == image_set and args.reuse_images:
             print("Waiting on new images...")
             time.sleep(10)
+    with open('training_times.pkl', 'wb') as f:
+        pickle.dump(training_times, f)
+    with open('inference_times.pkl', 'wb') as f:
+        pickle.dump(inference_times, f)
+    with open('client_to_server_transfer_times.pkl', 'wb') as f:
+        pickle.dump(client_to_server_transfer_times, f)
+    with open('server_to_client_transfer_times.pkl', 'wb') as f:
+        pickle.dump(server_to_client_transfer_times, f)
 
 
 if __name__ == '__main__':
