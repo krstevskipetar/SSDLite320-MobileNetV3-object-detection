@@ -181,5 +181,6 @@ if __name__ == "__main__":
                      num_classes=args.num_classes, learning_rate=args.learning_rate,
                      validate=args.validate, image_path_val=args.image_path_val,
                      annotation_path_val=args.annotation_path_val,
+                     label_file=args.label_file,
                      steps=args.steps)
     fed_avg()
