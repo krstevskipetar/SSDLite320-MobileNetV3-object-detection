@@ -101,11 +101,6 @@ class FedAvg:
         finally:
             conn.close()
 
-    # def server_update(self, model, learning_rate):
-    #     with torch.no_grad():
-    #         for param, global_param in zip(model.parameters(), self.global_model.parameters()):
-    #             update = learning_rate * (param.data - global_param.data)
-    #             global_param.data.add_(update)
     def server_update(self, client_models, learning_rate):
         # Ensure no gradients are calculated for global_model during update
         with torch.no_grad():
@@ -130,6 +125,20 @@ class FedAvg:
     def __call__(self, *args, **kwargs):
         step = 0
         mean_aps, mean_ars = [], []
+        if self.validate:
+            mean_ap, mean_ar, class_precisions, class_recalls = run_validation(
+                checkpoint='local_data/global_model.pth',
+                image_path_val=self.image_path_val,
+                annotation_path_val=self.annotation_path_val,
+                label_file=self.label_file,
+                device=self.device,
+                num_classes=self.num_classes,
+                shuffle=True,
+                wandb_logging=False,
+                wandb_project_name=None,
+                iou_thresholds=[0.5])
+            mean_aps.append(mean_ap)
+            mean_ars.append(mean_ar)
         while True:
             for client_idx, client in enumerate(self.clients):
                 print(f"Sending global model to {client['address']}:{client['port']}")

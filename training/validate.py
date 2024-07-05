@@ -63,7 +63,7 @@ def infer_and_plot_batch_predictions(model, data_loader_val, class_names, n_plot
 
 
 def run_validation(checkpoint, image_path_val, annotation_path_val, label_file, device='cpu', num_classes=5,
-                   shuffle=True, wandb_logging=False, wandb_project_name=None):
+                   shuffle=True, wandb_logging=False, wandb_project_name=None, iou_thresholds=None):
     class_names = load_class_names(label_file)
 
     dataset_val = YOLODataset(image_path=image_path_val,
@@ -86,7 +86,7 @@ def run_validation(checkpoint, image_path_val, annotation_path_val, label_file, 
         model.load_state_dict(torch.load(checkpoint, map_location=device)['model_state_dict'])
     model.eval()
 
-    iou_thresholds = np.arange(0.05, 0.55, 0.05)
+    iou_thresholds = np.arange(0.05, 0.55, 0.05) if iou_thresholds is None else iou_thresholds
     mean_ap, mean_ar, class_precisions, class_recalls = validate(model=model,
                                                                  data_loader=data_loader_val,
                                                                  class_names=class_names,
