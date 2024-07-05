@@ -186,7 +186,7 @@ class FedAvg:
                 step += 1
                 if step > self.steps:
                     print(f"{step} steps reached, stopping server.")
-                break
+                    break
         if self.validate:
             plt.figure(figsize=(10, 6))
             plt.plot(range(1, len(mean_aps) + 1), mean_aps, label='Mean Average Precision', marker='o')
