@@ -95,6 +95,7 @@ class ClientFineTune:
         dataset = YOLODataset(image_path=self.image_directory,
                               annotation_path=self.annotation_directory,
                               label_file=self.label_file)
+        dataset._validate_input()
         self.data_loader = create_dataloader(
             dataset,
             batch_size=self.batch_size,
