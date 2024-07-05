@@ -81,7 +81,7 @@ class YOLODataset(torch.utils.data.Dataset):
 
             with open(annotation_path, 'r') as f:
                 ann_file = f.readlines()
-                if len(ann_file) == 0 or np.array(ann_file).ndim < 2:
+                if len(ann_file) == 0:
                     removed_count += 1
                     continue
 
