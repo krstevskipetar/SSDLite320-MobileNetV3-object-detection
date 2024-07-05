@@ -76,7 +76,7 @@ class YOLODataset(torch.utils.data.Dataset):
                 i += 1
             with open(os.path.join(self.annotation_path, self.annotation_files[idx]), 'r') as f:
                 ann_file = f.readlines()
-                if len(ann_file) == 0:
+                if len(ann_file) == 0 or np.array(ann_file).ndim < 2:
                     self.annotation_files.pop(idx)
             try:
                 boxes, labels = self._get_annotation(idx)
