@@ -65,12 +65,13 @@ def infer_annotations(checkpoint, input_directory, output_directory, device='cpu
         if device != 'cpu':
             kept_predictions['boxes'] = [box.cpu() for box in kept_predictions['boxes']]
             kept_predictions['labels'] = [label.cpu() for label in kept_predictions['labels']]
-        with open(file_name, 'w') as f:
-            for pred_box, pred_label in zip(kept_predictions['boxes'], kept_predictions['labels']):
-                label = int(pred_label)
-                box = pred_box.tolist()
-                box = bbox2yolobbox(box)
-                f.write(f'{label} {box[0]} {box[1]} {box[2]} {box[3]}\n')
+        if kept_predictions['boxes'] and kept_predictions['labels']:
+            with open(file_name, 'w') as f:
+                for pred_box, pred_label in zip(kept_predictions['boxes'], kept_predictions['labels']):
+                    label = int(pred_label)
+                    box = pred_box.tolist()
+                    box = bbox2yolobbox(box)
+                    f.write(f'{label} {box[0]} {box[1]} {box[2]} {box[3]}\n')
 
 
 def main(args):
