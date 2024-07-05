@@ -4,7 +4,7 @@ import pickle
 import time
 
 from federated_training.client_finetuning import ClientFineTune
-from gpizero import CPUTemperature
+from gpiozero import CPUTemperature
 
 
 def parse_arguments():
