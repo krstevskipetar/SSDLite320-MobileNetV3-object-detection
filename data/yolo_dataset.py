@@ -86,7 +86,7 @@ class YOLODataset(torch.utils.data.Dataset):
                     continue
 
             try:
-                image = self.read_image(image_path)
+                image = read_image(image_path)
                 boxes, labels = self._get_annotation(idx)
                 if np.shape(boxes)[1] > 4:
                     removed_count += 1
