@@ -4,6 +4,7 @@ import pickle
 import time
 
 from federated_training.client_finetuning import ClientFineTune
+from gpizero import CPUTemperature
 
 
 def parse_arguments():
@@ -32,8 +33,12 @@ def main(args):
     inference_times = []
     all_steps_losses = []
     all_steps_mean_losses = []
-
+    cpu_temps = []
     while True:
+        temp = CPUTemperature()
+        cpu_temp = round(temp.temperature, 1)
+        cpu_temps.append(cpu_temp)
+        print("CPU temperature: {} °C".format(cpu_temp))
         print(os.listdir(args.input_img_directory))
         while len(os.listdir(args.input_img_directory)) == 0:
             print("No images yet, waiting.")
@@ -76,6 +81,8 @@ def main(args):
         pickle.dump(all_steps_losses, f)
     with open('finetune_data/all_steps_mean_losses.pkl', 'wb') as f:
         pickle.dump(all_steps_mean_losses, f)
+    with open('finetune_data/cpu_temps.pkl', 'wb') as f:
+        pickle.dump(cpu_temps, f)
 
 
 if __name__ == '__main__':
