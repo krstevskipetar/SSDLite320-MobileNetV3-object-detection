@@ -74,6 +74,10 @@ class YOLODataset(torch.utils.data.Dataset):
                 self.image_files.pop(idx)
                 self.annotation_files.pop(idx)
                 i += 1
+            with open(os.path.join(self.annotation_path, self.annotation_files[idx]), 'r') as f:
+                ann_file = f.readlines()
+                if len(ann_file) == 0:
+                    self.annotation_files.pop(idx)
             try:
                 boxes, labels = self._get_annotation(idx)
                 if np.shape(boxes)[1] > 4:
