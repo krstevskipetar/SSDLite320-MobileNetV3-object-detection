@@ -88,7 +88,7 @@ class ClientFineTune:
                           device=self.device,
                           num_classes=self.num_classes,
                           iou_threshold=0.1,
-                          score_threshold=0.8)
+                          score_threshold=0.7)
         end_inference = perf_counter()
         inference_time = end_inference - start_inference
         start_training = perf_counter()
