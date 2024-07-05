@@ -78,6 +78,8 @@ class YOLODataset(torch.utils.data.Dataset):
                 ann_file = f.readlines()
                 if len(ann_file) == 0 or np.array(ann_file).ndim < 2:
                     self.annotation_files.pop(idx)
+                    self.image_files.pop(idx)
+
             try:
                 image = read_image(os.path.join(self.image_path, self.image_files[idx]))
                 boxes, labels = self._get_annotation(idx)
