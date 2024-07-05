@@ -178,13 +178,14 @@ class FedAvg:
                     num_classes=self.num_classes,
                     shuffle=True,
                     wandb_logging=False,
-                    wandb_project_name=None)
+                    wandb_project_name=None,
+                    iou_thresholds=[0.5])
                 mean_aps.append(mean_ap)
                 mean_ars.append(mean_ar)
-            self.client_index = 0
-            step += 1
-            if step > self.steps:
-                print(f"{step} steps reached, stopping server.")
+                self.client_index = 0
+                step += 1
+                if step > self.steps:
+                    print(f"{step} steps reached, stopping server.")
                 break
         if self.validate:
             plt.figure(figsize=(10, 6))
