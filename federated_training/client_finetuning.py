@@ -86,7 +86,9 @@ class ClientFineTune:
                           input_directory=self.image_directory,
                           output_directory=self.annotation_directory,
                           device=self.device,
-                          num_classes=self.num_classes)
+                          num_classes=self.num_classes,
+                          iou_threshold=0.1,
+                          score_threshold=0.8)
         end_inference = perf_counter()
         inference_time = end_inference - start_inference
         start_training = perf_counter()

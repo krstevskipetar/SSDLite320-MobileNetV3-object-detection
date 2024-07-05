@@ -135,6 +135,7 @@ class FedAvg:
             torch.save({
                 'model_state_dict': self.global_model.state_dict(),
             }, join('local_data', 'global_model.pth'))
+            self.checkpoint = join('local_data', 'global_model.pth')
             if self.validate:
                 mean_ap, mean_ar, class_precisions, class_recalls = run_validation(
                     checkpoint='local_data/global_model.pth',
