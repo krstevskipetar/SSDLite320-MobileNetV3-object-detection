@@ -74,12 +74,14 @@ class YOLODataset(torch.utils.data.Dataset):
                 self.image_files.pop(idx)
                 self.annotation_files.pop(idx)
                 i += 1
+                continue
             with open(os.path.join(self.annotation_path, self.annotation_files[idx]), 'r') as f:
                 ann_file = f.readlines()
                 if len(ann_file) == 0 or np.array(ann_file).ndim < 2:
                     self.image_files.pop(idx)
                     self.annotation_files.pop(idx)
                     i += 1
+                    continue
 
             try:
                 image = read_image(os.path.join(self.image_path, self.image_files[idx]))
@@ -88,6 +90,7 @@ class YOLODataset(torch.utils.data.Dataset):
                     self.image_files.pop(idx)
                     self.annotation_files.pop(idx)
                     i += 1
+                    continue
             except (IndexError, ValueError, RuntimeError):
                 self.image_files.pop(idx)
                 self.annotation_files.pop(idx)
