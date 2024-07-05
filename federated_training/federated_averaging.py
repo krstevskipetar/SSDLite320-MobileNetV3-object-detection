@@ -101,11 +101,31 @@ class FedAvg:
         finally:
             conn.close()
 
-    def server_update(self, model, learning_rate):
+    # def server_update(self, model, learning_rate):
+    #     with torch.no_grad():
+    #         for param, global_param in zip(model.parameters(), self.global_model.parameters()):
+    #             update = learning_rate * (param.data - global_param.data)
+    #             global_param.data.add_(update)
+    def server_update(self, client_models, learning_rate):
+        # Ensure no gradients are calculated for global_model during update
         with torch.no_grad():
-            for param, global_param in zip(model.parameters(), self.global_model.parameters()):
-                update = learning_rate * (param.data - global_param.data)
-                global_param.data.add_(update)
+            # Initialize a dictionary to accumulate updates
+            updates = {name: torch.zeros_like(param) for name, param in self.global_model.named_parameters()}
+
+            # Aggregate updates from each client
+            for model in client_models:
+                for (name, param), (global_name, global_param) in zip(model.named_parameters(),
+                                                                      self.global_model.named_parameters()):
+                    updates[global_name] += (param.data - global_param.data)
+
+            # Average the updates
+            num_clients = len(client_models)
+            for name, update in updates.items():
+                updates[name] /= num_clients
+
+            # Apply the averaged updates to the global model
+            for name, param in self.global_model.named_parameters():
+                param.data.add_(learning_rate * updates[name])
 
     def __call__(self, *args, **kwargs):
         step = 0
@@ -123,11 +143,14 @@ class FedAvg:
                         print("Client not available, waiting...")
                         time.sleep(15)
             self.receive_client_weights()
+
+            client_models = []
             for checkpoint in os.listdir(self.output_dir):
                 client_model = get_model(self.num_classes)
                 checkpoint = torch.load(join(self.output_dir, checkpoint), map_location=self.device)
                 client_model.load_state_dict(checkpoint['model_state_dict'])
-                self.server_update(client_model, self.learning_rate)
+                client_models.append(client_model)
+            self.server_update(client_models, self.learning_rate)
 
             shutil.rmtree(self.output_dir)
             os.makedirs(self.output_dir)
