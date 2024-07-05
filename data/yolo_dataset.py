@@ -92,14 +92,18 @@ class YOLODataset(torch.utils.data.Dataset):
         print(f"Removed {i} invalid samples")
 
     def _get_annotation(self, image_id):
-        with open(os.path.join(self.annotation_path, self.annotation_files[image_id]), 'r') as f:
-            ann_file = f.readlines()
-            ann_file = [[float(a) for a in ann_line.strip().split(' ')] for ann_line in ann_file]
+        try:
+            with open(os.path.join(self.annotation_path, self.annotation_files[image_id]), 'r') as f:
+                ann_file = f.readlines()
+                ann_file = [[float(a) for a in ann_line.strip().split(' ')] for ann_line in ann_file]
 
-        ann_file = np.array(ann_file)
-        labels = ann_file[:, 0].astype(int)
-        boxes = ann_file[:, 1:]
-        return boxes.tolist(), labels.tolist()
+            ann_file = np.array(ann_file)
+            labels = ann_file[:, 0].astype(int)
+            boxes = ann_file[:, 1:]
+            return boxes.tolist(), labels.tolist()
+        except Exception as e:
+            print(e)
+            breakpoint()
 
     def __getitem__(self, index):
         image_id = self.ids[index]
