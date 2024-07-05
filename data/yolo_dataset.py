@@ -68,35 +68,39 @@ class YOLODataset(torch.utils.data.Dataset):
         return x1, y1, x2, y2
 
     def _validate_input(self):
-        i = 0
+        valid_indices = []
+        removed_count = 0
+
         for idx, (image_file, annotation_file) in enumerate(zip(self.image_files, self.annotation_files)):
-            if not exists(join(self.image_path, image_file)) or not exists(join(self.annotation_path, annotation_file)):
-                self.image_files.pop(idx)
-                self.annotation_files.pop(idx)
-                i += 1
+            image_path = os.path.join(self.image_path, image_file)
+            annotation_path = os.path.join(self.annotation_path, annotation_file)
+
+            if not os.path.exists(image_path) or not os.path.exists(annotation_path):
+                removed_count += 1
                 continue
-            with open(os.path.join(self.annotation_path, self.annotation_files[idx]), 'r') as f:
+
+            with open(annotation_path, 'r') as f:
                 ann_file = f.readlines()
                 if len(ann_file) == 0 or np.array(ann_file).ndim < 2:
-                    self.image_files.pop(idx)
-                    self.annotation_files.pop(idx)
-                    i += 1
+                    removed_count += 1
                     continue
 
             try:
-                image = read_image(os.path.join(self.image_path, self.image_files[idx]))
+                image = self.read_image(image_path)
                 boxes, labels = self._get_annotation(idx)
                 if np.shape(boxes)[1] > 4:
-                    self.image_files.pop(idx)
-                    self.annotation_files.pop(idx)
-                    i += 1
+                    removed_count += 1
                     continue
             except (IndexError, ValueError, RuntimeError):
-                self.image_files.pop(idx)
-                self.annotation_files.pop(idx)
-                i += 1
+                removed_count += 1
+                continue
 
-        print(f"Removed {i} invalid samples")
+            valid_indices.append(idx)
+
+        self.image_files = [self.image_files[i] for i in valid_indices]
+        self.annotation_files = [self.annotation_files[i] for i in valid_indices]
+
+        print(f"Removed {removed_count} invalid samples")
 
     def _get_annotation(self, image_id):
         with open(os.path.join(self.annotation_path, self.annotation_files[image_id]), 'r') as f:
