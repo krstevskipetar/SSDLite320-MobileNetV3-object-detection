@@ -36,3 +36,5 @@ format. Non-background classes should start at class_id 1 .
 The YOLODataset class then reformats the XYWH input annotations into an unnormalized XYXY format for compatibility with
 torch models, which use the COCO format.
 
+### Federated Learning
+The code for distributed communications and federated averaging is more of a proof of concept, as this code was written as part of my bachelor's project. I wouldn't recommend using it as is in real world scenarios as it uses raw TCP communication and is rather unsafe, but it may serve as a guide for someone in the future.
