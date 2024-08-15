@@ -1,6 +1,6 @@
 torch==2.3.0 # using older versions of torch/torchvision leads to segmentation fault on Raspberry Pi 3B
 torchvision==0.18.0
-opencv-python==4.8.1.78
+opencv-python==4.10.0.82
 tqdm==4.66.1
 numpy==1.26.2
 pandas==2.1.3

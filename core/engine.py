@@ -25,23 +25,19 @@ def validate(model, data_loader, class_names, device='cpu', iou_thresholds=None)
 
         targets = [{k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in t.items()} for t in targets]
 
-        mean_ap, mean_ar, class_precisions, class_recalls = calculate_ap_ar_map(output, targets, class_names,
-                                                                                iou_thresholds)
+        mean_ap, class_precisions = calculate_ap_ar_map(output, targets, class_names, iou_thresholds)
 
         for key in class_names:
             all_class_precisions[key].append(class_precisions[key])
-            all_class_recalls[key].append(class_recalls[key])
 
         all_ap.append(mean_ap)
-        all_ar.append(mean_ar)
     end_time = time.time()
     print("Inference took ", end_time - start_time, " seconds")
     mean_ap, mean_ar = np.mean(all_ap), np.mean(all_ar)
     for key in class_names:
         all_class_precisions[key] = np.mean(all_class_precisions[key])
-        all_class_recalls[key] = np.mean(all_class_recalls[key])
 
-    return mean_ap, mean_ar, all_class_precisions, all_class_recalls
+    return mean_ap, all_class_precisions
 
 
 def train_epoch(model, optimizer, data_loader, device='cpu', lr_scheduler=None, print_freq=100, epoch_number=0,
