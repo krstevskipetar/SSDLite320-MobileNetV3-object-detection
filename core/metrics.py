@@ -1,45 +1,57 @@
 from collections import Counter
 
 import torch
-from fontTools.misc.bezierTools import epsilon
 
 from core.postprocessing import apply_nms
 
 
-def calculate_precision_recall(predictions, targets, iou_threshold):
-    true_positives = 0
-    false_positives = 0
-    total_gt_boxes = len(targets['boxes'])
+def calculate_precision_recall(class_id, class_predictions, class_ground_truth, iou_threshold):
+    detections = []
+    ground_truths = []
+    for i, prediction in enumerate(class_predictions):
+        for j, box in enumerate(prediction['boxes']):
+            x1, y1, x2, y2 = box
+            prob = prediction['scores'][j]
+            detections.append([i, class_id, prob, x1, y1, x2, y2])
+    for i, gt in enumerate(class_ground_truth):
+        for j, box in enumerate(gt['boxes']):
+            x1, y1, x2, y2 = box
+            ground_truths.append([i, class_id, 1, x1, y1, x2, y2])
 
-    if total_gt_boxes == 0:
-        return 0, 0
-
-    keep = apply_nms(predictions['boxes'], predictions['scores'], threshold=0.2, score_threshold=0.05)
-    kept_predictions = {'boxes': predictions['boxes'][keep],
-                        'labels': predictions['labels'][keep]}
-
-    matched_gt_indices = torch.zeros(total_gt_boxes, dtype=torch.bool)
-
-    for pred_box, pred_label in zip(kept_predictions['boxes'], kept_predictions['labels']):
-        max_iou = 0
-        matched_gt_index = -1
-
-        for i, (gt_box, gt_label) in enumerate(zip(targets['boxes'], targets['labels'])):
-            iou = calculate_iou(pred_box, gt_box)
-            if iou > max_iou and gt_label == pred_label and not matched_gt_indices[i]:
-                max_iou = iou
-                matched_gt_index = i
-
-        if max_iou >= iou_threshold and matched_gt_index >= 0:
-            true_positives += 1
-            matched_gt_indices[matched_gt_index] = True
+    amount_bboxes = Counter([gt[0] for gt in ground_truths])
+    for key, val in amount_bboxes.items():
+        amount_bboxes[key] = torch.zeros(val)
+    detections.sort(key=lambda x: x[2], reverse=True)
+    TP = torch.zeros(len(detections))
+    FP = torch.zeros(len(detections))
+    total_true_boxes = len(ground_truths)
+    for detection_idx, detection in enumerate(detections):
+        ground_truth_img = [bbox for bbox in ground_truths if bbox[0] == detection[0]]
+        best_iou = 0
+        best_gt_idx = None
+        for idx, gt in enumerate(ground_truth_img):
+            iou = calculate_iou(detection[3:], gt[3:])
+            if iou > best_iou:
+                best_iou = iou
+                best_gt_idx = idx
+        if best_iou > iou_threshold:
+            if best_gt_idx is not None:
+                if amount_bboxes[detection[0]][best_gt_idx] == 0:
+                    TP[detection_idx] = 1
+                    amount_bboxes[detection[0]][best_gt_idx] = 1  # bbox covered
+                else:
+                    FP[detection_idx] = 1
+            else:
+                FP[detection_idx] = 1
         else:
-            false_positives += 1
-
-    precision = true_positives / (true_positives + false_positives + 1e-12)
-    recall = true_positives / (total_gt_boxes + 1e-12)
-
-    return precision, recall
+            FP[detection_idx] = 1
+    TP_cumsum = torch.cumsum(TP, dim=0)
+    FP_cumsum = torch.cumsum(FP, dim=0)
+    recalls = TP_cumsum / (total_true_boxes + 1e-6)
+    precisions = torch.divide(TP_cumsum, (TP_cumsum + FP_cumsum + 1e-6))
+    precisions = torch.cat((torch.tensor([1]), precisions))
+    recalls = torch.cat((torch.tensor([0]), recalls))
+    return precisions, recalls
 
 
 def calculate_iou(bbox1, bbox2):
@@ -72,7 +84,7 @@ def filter_values_by_class(values: list, class_id: int):
     return filtered_values
 
 
-def calculate_ap_ar_map(predictions, ground_truth, class_names, iou_thresholds=None):
+def calculate_mean_ap(predictions, ground_truth, class_names, iou_thresholds=None):
     if iou_thresholds is None:
         iou_thresholds = torch.linspace(0.5, 0.95, 10)  # Standard COCO IoU thresholds
     kept_predictions = []
@@ -92,53 +104,8 @@ def calculate_ap_ar_map(predictions, ground_truth, class_names, iou_thresholds=N
         for class_id in range(1, num_classes + 1, 1):
             class_predictions = filter_values_by_class(values=predictions, class_id=class_id)
             class_ground_truth = filter_values_by_class(values=ground_truth, class_id=class_id)
-
-            detections = []
-            ground_truths = []
-            for i, prediction in enumerate(class_predictions):
-                for j, box in enumerate(prediction['boxes']):
-                    x1, y1, x2, y2 = box
-                    prob = prediction['scores'][j]
-                    detections.append([i, class_id, prob, x1, y1, x2, y2])
-            for i, gt in enumerate(class_ground_truth):
-                for j, box in enumerate(gt['boxes']):
-                    x1, y1, x2, y2 = box
-                    ground_truths.append([i, class_id, 1, x1, y1, x2, y2])
-
-            amount_bboxes = Counter([gt[0] for gt in ground_truths])
-            for key, val in amount_bboxes.items():
-                amount_bboxes[key] = torch.zeros(val)
-            detections.sort(key=lambda x: x[2], reverse=True)
-            TP = torch.zeros(len(detections))
-            FP = torch.zeros(len(detections))
-            total_true_boxes = len(ground_truths)
-            for detection_idx, detection in enumerate(detections):
-                ground_truth_img = [bbox for bbox in ground_truths if bbox[0] == detection[0]]
-                num_gts = len(ground_truth_img)
-                best_iou = 0
-                best_gt_idx = None
-                for idx, gt in enumerate(ground_truth_img):
-                    iou = calculate_iou(detection[3:], gt[3:])
-                    if iou > best_iou:
-                        best_iou = iou
-                        best_gt_idx = idx
-                if best_iou > iou_threshold:
-                    if best_gt_idx is not None:
-                        if amount_bboxes[detection[0]][best_gt_idx] == 0:
-                            TP[detection_idx] = 1
-                            amount_bboxes[detection[0]][best_gt_idx] = 1  # bbox covered
-                        else:
-                            FP[detection_idx] = 1
-                    else:
-                        FP[detection_idx] = 1
-                else:
-                    FP[detection_idx] = 1
-            TP_cumsum = torch.cumsum(TP, dim=0)
-            FP_cumsum = torch.cumsum(FP, dim=0)
-            recalls = TP_cumsum / (total_true_boxes + 1e-6)
-            precisions = torch.divide(TP_cumsum, (TP_cumsum + FP_cumsum + epsilon))
-            precisions = torch.cat((torch.tensor([1]), precisions))
-            recalls = torch.cat((torch.tensor([0]), recalls))
+            precisions, recalls = calculate_precision_recall(class_id, class_predictions, class_ground_truth,
+                                                             iou_threshold)
             ap = torch.trapz(precisions, recalls)
             average_precisions.append(ap)
             class_precisions[class_name_dict[class_id]].append(ap)

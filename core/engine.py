@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from core.metrics import calculate_ap_ar_map
+from core.metrics import calculate_mean_ap
 from vision.references.detection import utils
 
 
@@ -25,7 +25,7 @@ def validate(model, data_loader, class_names, device='cpu', iou_thresholds=None)
 
         targets = [{k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in t.items()} for t in targets]
 
-        mean_ap, class_precisions = calculate_ap_ar_map(output, targets, class_names, iou_thresholds)
+        mean_ap, class_precisions = calculate_mean_ap(output, targets, class_names, iou_thresholds)
 
         for key in class_names:
             all_class_precisions[key].append(class_precisions[key])

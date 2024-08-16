@@ -10,3 +10,5 @@
 /dist/
 /validation_results/
 /notebooks/
+metrics.json
+config.json

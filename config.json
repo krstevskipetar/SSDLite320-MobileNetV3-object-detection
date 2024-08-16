@@ -1,1 +1,0 @@
-{"run_type": "validation", "optimizer": "SGD", "weight_decay": 0.0005, "momentum": 0.9, "lr_scheduler": "CosineAnnealingLR", "T_max": 10, "eta_min": 0, "learning_rate": 0.001, "detector": "SSDLite", "backbone": "MobileNetV3", "dataset": "waste-dataset-v2", "epochs": 100, "id": null}
