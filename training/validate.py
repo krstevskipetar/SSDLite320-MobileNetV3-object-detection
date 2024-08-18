@@ -87,13 +87,13 @@ def run_validation(checkpoint, image_path_val, annotation_path_val, label_file, 
     model.eval()
 
     iou_thresholds = np.arange(0.05, 0.55, 0.05) if iou_thresholds is None else iou_thresholds
-    mean_ap, mean_ar, class_precisions, class_recalls = validate(model=model,
-                                                                 data_loader=data_loader_val,
-                                                                 class_names=class_names,
-                                                                 device=device,
-                                                                 iou_thresholds=iou_thresholds)
+    mean_ap, class_precisions = validate(model=model,
+                                         data_loader=data_loader_val,
+                                         class_names=class_names,
+                                         device=device,
+                                         iou_thresholds=iou_thresholds)
     print("For iou thresholds", iou_thresholds)
-    print(f"Mean Average Precision: {mean_ap}\nMean Average Recall: {mean_ar}")
+    print(f"Mean Average Precision: {mean_ap}")
 
     print("Class precisions: ")
     for key, value in class_precisions.items():
@@ -119,27 +119,24 @@ def run_validation(checkpoint, image_path_val, annotation_path_val, label_file, 
             "epochs": 100,
             "checkpoint": checkpoint
         }
-        metrics = {'mAP@5:50': mean_ap,
-                   'mAR@5:50': mean_ar}
+        metrics = {'mAP@5:50': mean_ap}
         metrics.update(
             {str(class_name) + '_precision': class_precision for class_name, class_precision in
              class_precisions.items()})
-        metrics.update(
-            {str(class_name) + '_recall': class_recall for class_name, class_recall in class_recalls.items()})
         figures = infer_and_plot_batch_predictions(model, data_loader_val,
                                                    {i + 1: c for (i, c) in enumerate(class_names)},
                                                    5)
         if wandb_project_name:
             log_to_wandb(wandb_project_name, config, metrics, figures, checkpoint)
-    return mean_ap, mean_ar, class_precisions, class_recalls
+    return mean_ap, class_precisions
 
 
 def main():
     args = parse_args()
-    _, _, _, _ = run_validation(args.checkpoint, args.image_path_val, args.annotation_path_val, args.label_file,
-                                args.device,
-                                args.num_classes, args.shuffle, args.wandb_logging,
-                                args.wandb_project_name)
+    _, _ = run_validation(args.checkpoint, args.image_path_val, args.annotation_path_val, args.label_file,
+                          args.device,
+                          args.num_classes, args.shuffle, args.wandb_logging,
+                          args.wandb_project_name)
 
 
 if __name__ == "__main__":
