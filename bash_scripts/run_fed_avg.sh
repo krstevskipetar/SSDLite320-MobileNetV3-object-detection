@@ -10,7 +10,7 @@ learning_rate=0.001
 image_path_val='/home/wfpetarkrestevski/Desktop/waste_dataset_v2/val/images'
 annotation_path_val='/home/wfpetarkrestevski/Desktop/waste_dataset_v2/val/labels'
 label_file='/home/wfpetarkrestevski/Desktop/waste_dataset_v2/label_map.txt'
-steps=24
+steps=10
 python federated_training/federated_averaging.py  --n_clients $n_clients \
                         --clients "${clients[@]}" \
                         --checkpoint $checkpoint \

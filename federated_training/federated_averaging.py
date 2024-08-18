@@ -10,6 +10,7 @@ from os.path import join
 
 import torch
 from matplotlib import pyplot as plt
+from tqdm import tqdm
 
 from core.model import get_model
 from federated_training.distributed_comms import send_file, receive_file
@@ -125,6 +126,7 @@ class FedAvg:
     def __call__(self, *args, **kwargs):
         step = 0
         mean_aps = []
+        pbar = tqdm(total=self.steps)
         if self.validate:
             mean_ap, class_precisions = run_validation(
                 checkpoint='local_data/global_model.pth',
@@ -182,6 +184,7 @@ class FedAvg:
                 mean_aps.append(mean_ap)
                 self.client_index = 0
                 step += 1
+                pbar.update()
                 if step > self.steps:
                     print(f"{step} steps reached, stopping server.")
                     break
