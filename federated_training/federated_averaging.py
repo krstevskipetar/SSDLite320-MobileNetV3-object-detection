@@ -124,9 +124,9 @@ class FedAvg:
 
     def __call__(self, *args, **kwargs):
         step = 0
-        mean_aps, mean_ars = [], []
+        mean_aps = []
         if self.validate:
-            mean_ap, mean_ar, class_precisions, class_recalls = run_validation(
+            mean_ap, class_precisions = run_validation(
                 checkpoint='local_data/global_model.pth',
                 image_path_val=self.image_path_val,
                 annotation_path_val=self.annotation_path_val,
@@ -138,7 +138,6 @@ class FedAvg:
                 wandb_project_name=None,
                 iou_thresholds=[0.5])
             mean_aps.append(mean_ap)
-            mean_ars.append(mean_ar)
         while True:
             for client_idx, client in enumerate(self.clients):
                 print(f"Sending global model to {client['address']}:{client['port']}")
@@ -169,7 +168,7 @@ class FedAvg:
             }, join('local_data', 'global_model.pth'))
             self.checkpoint = join('local_data', 'global_model.pth')
             if self.validate:
-                mean_ap, mean_ar, class_precisions, class_recalls = run_validation(
+                mean_ap, class_precisions = run_validation(
                     checkpoint='local_data/global_model.pth',
                     image_path_val=self.image_path_val,
                     annotation_path_val=self.annotation_path_val,
@@ -181,7 +180,6 @@ class FedAvg:
                     wandb_project_name=None,
                     iou_thresholds=[0.5])
                 mean_aps.append(mean_ap)
-                mean_ars.append(mean_ar)
                 self.client_index = 0
                 step += 1
                 if step > self.steps:
@@ -200,8 +198,6 @@ class FedAvg:
 
             with open('mean_aps.pkl', 'wb') as f:
                 pickle.dump(mean_aps, f)
-            with open('mean_ars.pkl', 'wb') as f:
-                pickle.dump(mean_ars, f)
 
 
 if __name__ == "__main__":
