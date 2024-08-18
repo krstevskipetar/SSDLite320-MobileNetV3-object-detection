@@ -99,10 +99,6 @@ def run_validation(checkpoint, image_path_val, annotation_path_val, label_file, 
     for key, value in class_precisions.items():
         print(f"\t-{key}: {value}")
 
-    print("Class recalls: ")
-    for key, value in class_recalls.items():
-        print(f"\t-{key}: {value}")
-
     if wandb_logging:
         config = {
             "run_type": "validation",

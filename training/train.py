@@ -79,20 +79,15 @@ def run_training(data_loader_train, data_loader_val, model, optimizer, lr_schedu
         }, f'checkpoints/epoch_{epoch}.pth')
         if epoch != 0 and epoch % evaluate_every == 0:
             print("Evaluation on val set")
-            mean_ap, mean_ar, class_precisions, class_recalls = validate(model, data_loader_val, class_names,
-                                                                         torch.device(device), [0.5])
+            mean_ap, class_precisions, = validate(model, data_loader_val, class_names,
+                                                  torch.device(device), [0.5])
             metrics['mAP@50'].append(mean_ap)
-            metrics['mAR@50'].append(mean_ar)
 
             print("For iou thresholds", 0.5)
-            print(f"Mean Average Precision: {mean_ap}\nMean Average Recall: {mean_ar}")
+            print(f"Mean Average Precision: {mean_ap}")
 
             print("Class precisions: ")
             for key, value in class_precisions.items():
-                print(f"\t-{key}: {value}")
-
-            print("Class recalls: ")
-            for key, value in class_recalls.items():
                 print(f"\t-{key}: {value}")
 
         last_checkpoint = join(checkpoint_path, f'/epoch_{epoch}.pth')
