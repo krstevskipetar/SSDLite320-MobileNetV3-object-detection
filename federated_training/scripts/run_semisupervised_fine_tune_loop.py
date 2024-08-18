@@ -37,6 +37,7 @@ def main(args):
     while True:
         temp = CPUTemperature()
         cpu_temp = round(temp.temperature, 1)
+        print(f"{cpu_temp} C")
         cpu_temps.append(cpu_temp)
         print("CPU temperature: {} °C".format(cpu_temp))
         print(os.listdir(args.input_img_directory))
