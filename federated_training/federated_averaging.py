@@ -128,7 +128,7 @@ class FedAvg:
         mean_aps = []
         pbar = tqdm(total=self.steps)
         if self.validate:
-            mean_ap, class_precisions = run_validation(
+            mean_ap, class_precisions, _, _ = run_validation(
                 checkpoint='local_data/global_model.pth',
                 image_path_val=self.image_path_val,
                 annotation_path_val=self.annotation_path_val,
@@ -170,7 +170,7 @@ class FedAvg:
             }, join('local_data', 'global_model.pth'))
             self.checkpoint = join('local_data', 'global_model.pth')
             if self.validate:
-                mean_ap, class_precisions = run_validation(
+                mean_ap, class_precisions, _, _ = run_validation(
                     checkpoint='local_data/global_model.pth',
                     image_path_val=self.image_path_val,
                     annotation_path_val=self.annotation_path_val,

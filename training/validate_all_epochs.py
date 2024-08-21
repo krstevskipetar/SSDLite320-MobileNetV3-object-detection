@@ -68,8 +68,11 @@ def infer_and_plot_batch_predictions(model, data_loader_val, class_names, n_plot
 def main():
     args = parse_args()
     class_names = load_class_names(args.label_file)
+    all_class_average_precisions = {cn: {} for cn in class_names}
     all_class_precisions = {cn: {} for cn in class_names}
-    mean_aps, mean_ars = {}, {}
+    all_class_recalls = {cn: {} for cn in class_names}
+
+    mean_aps = {}
     dataset_val = YOLODataset(image_path=args.image_path_val,
                               annotation_path=args.annotation_path_val,
                               label_file=args.label_file,
@@ -110,33 +113,59 @@ def main():
             torch.load(os.path.join(args.checkpoints_path, checkpoint), map_location=device)['model_state_dict'])
         model.eval()
         iou_thresholds = [0.5]
-        mean_ap, class_precisions = validate(model=model,
-                                             data_loader=data_loader_val,
-                                             class_names=class_names,
-                                             device=device,
-                                             iou_thresholds=iou_thresholds)
+        mean_ap, class_average_precisions, ps, rs = validate(model=model,
+                                                             data_loader=data_loader_val,
+                                                             class_names=class_names,
+                                                             device=device,
+                                                             iou_thresholds=iou_thresholds)
         mean_aps.update({epoch_idx: mean_ap})
 
         print("For iou thresholds", iou_thresholds)
         print(f"Mean Average Precision: {mean_ap}")
 
+        print("Class average precisions: ")
+        for key, value in class_average_precisions.items():
+            all_class_average_precisions[key].update({epoch_idx: value})
+            print(f"\t-{key}: {value}")
+
         print("Class precisions: ")
-        for key, value in class_precisions.items():
+        for key, value in ps.items():
             all_class_precisions[key].update({epoch_idx: value})
             print(f"\t-{key}: {value}")
 
+        print("Class recalls: ")
+        for key, value in rs.items():
+            all_class_recalls[key].update({epoch_idx: value})
+            print(f"\t-{key}: {value}")
+
+        print("Class F1 scores: ")
+        for key in ps.keys():
+            p = ps[key]
+            r = rs[key]
+            f1 = 2 * (p * r) / (p + r + 1e-6)
+            print(f"\t-{key}: {f1}")
+
         if args.wandb_logging:
             metrics_to_log = {"mAP@50": mean_ap}
-            for key, value in class_precisions.items():
+            for key, value in class_average_precisions.items():
+                metrics_to_log.update({key + "_average_precision": value})
+            for key, value in ps.items():
                 metrics_to_log.update({key + "_precision": value})
-
+            for key, value in rs.items():
+                metrics_to_log.update({key + "_recall": value})
             log_to_wandb(args.wandb_project_name, config, metrics_to_log, [],
                          os.path.join(args.checkpoints_path, checkpoint), step=epoch_idx, plot=False)
 
     metrics = {'mAP@50': str(mean_aps)}
     metrics.update(
-        {str(class_name) + '_precision': str(class_precision) for class_name, class_precision in
+        {str(class_name) + '_average_precision': str(class_average_precision) for class_name, class_average_precision in
+         all_class_average_precisions.items()})
+    metrics.update(
+        {str(class_name) + '_average_precision': str(class_precision) for class_name, class_precision in
          all_class_precisions.items()})
+    metrics.update(
+        {str(class_name) + '_average_precision': str(class_recall) for class_name, class_recall in
+         all_class_recalls.items()})
 
     with open(os.path.join(args.output_path, "metrics.json"), "w") as metrics_file:
         json.dump(metrics, metrics_file)

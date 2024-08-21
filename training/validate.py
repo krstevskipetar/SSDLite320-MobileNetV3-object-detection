@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--label_file', default='/home/petar/waste_dataset_v2_refactored/label_map.txt')
     parser.add_argument('--shuffle', action='store_true', default=False)
     parser.add_argument('--device', default='cpu')
-    parser.add_argument('--checkpoint', default="checkpoints/checkpoints/epoch_99.pth")
+    parser.add_argument('--checkpoint', default="checkpoints/epoch_196.pth")
     parser.add_argument('--num_classes', type=int, default=5)
     parser.add_argument('--wandb_logging', action='store_true', default=False)
     parser.add_argument('--wandb_project_name', default=None)
@@ -87,17 +87,32 @@ def run_validation(checkpoint, image_path_val, annotation_path_val, label_file, 
     model.eval()
 
     iou_thresholds = np.arange(0.05, 0.55, 0.05) if iou_thresholds is None else iou_thresholds
-    mean_ap, class_precisions = validate(model=model,
-                                         data_loader=data_loader_val,
-                                         class_names=class_names,
-                                         device=device,
-                                         iou_thresholds=iou_thresholds)
+    mean_ap, class_average_precisions, ps, rs = validate(model=model,
+                                                         data_loader=data_loader_val,
+                                                         class_names=class_names,
+                                                         device=device,
+                                                         iou_thresholds=iou_thresholds)
     print("For iou thresholds", iou_thresholds)
     print(f"Mean Average Precision: {mean_ap}")
 
-    print("Class precisions: ")
-    for key, value in class_precisions.items():
+    print("Class average precisions: ")
+    for key, value in class_average_precisions.items():
         print(f"\t-{key}: {value}")
+
+    print("Class precisions: ")
+    for key, value in ps.items():
+        print(f"\t-{key}: {value}")
+
+    print("Class recalls: ")
+    for key, value in rs.items():
+        print(f"\t-{key}: {value}")
+
+    print("Class F1 scores: ")
+    for key in ps.keys():
+        p = ps[key]
+        r = rs[key]
+        f1 = 2 * (p * r) / (p + r + 1e-6)
+        print(f"\t-{key}: {f1}")
 
     if wandb_logging:
         config = {
@@ -115,21 +130,27 @@ def run_validation(checkpoint, image_path_val, annotation_path_val, label_file, 
             "epochs": 100,
             "checkpoint": checkpoint
         }
-        metrics = {'mAP@5:50': mean_ap}
+        metrics = {f'mAP@{int(min(iou_thresholds) * 100)}:{int(min(iou_thresholds) * 100)}': mean_ap}
+        metrics.update(
+            {str(class_name) + '_average_precision': class_average_precision for class_name, class_average_precision in
+             class_average_precisions.items()})
         metrics.update(
             {str(class_name) + '_precision': class_precision for class_name, class_precision in
-             class_precisions.items()})
+             ps.items()})
+        metrics.update(
+            {str(class_name) + '_recall': class_recall for class_name, class_recall in
+             rs.items()})
         figures = infer_and_plot_batch_predictions(model, data_loader_val,
                                                    {i + 1: c for (i, c) in enumerate(class_names)},
                                                    5)
         if wandb_project_name:
             log_to_wandb(wandb_project_name, config, metrics, figures, checkpoint)
-    return mean_ap, class_precisions
+    return mean_ap, class_average_precisions, ps, rs
 
 
 def main():
     args = parse_args()
-    _, _ = run_validation(args.checkpoint, args.image_path_val, args.annotation_path_val, args.label_file,
+    _, _, _, _ = run_validation(args.checkpoint, args.image_path_val, args.annotation_path_val, args.label_file,
                           args.device,
                           args.num_classes, args.shuffle, args.wandb_logging,
                           args.wandb_project_name)

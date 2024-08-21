@@ -97,8 +97,10 @@ def calculate_mean_ap(predictions, ground_truth, class_names, iou_thresholds=Non
 
     num_classes = len(class_names)
     class_name_dict = {i + 1: class_name for (i, class_name) in enumerate(class_names)}
-    class_precisions = {class_name_dict[i]: [] for i in range(1, num_classes + 1, 1)}
+    class_average_precisions = {class_name_dict[i]: [] for i in range(1, num_classes + 1, 1)}
     mean_average_precisions = []
+    ps = {class_name_dict[i]: [] for i in range(1, num_classes + 1, 1)}
+    rs = {class_name_dict[i]: [] for i in range(1, num_classes + 1, 1)}
     for iou_threshold in iou_thresholds:
         average_precisions = []
         for class_id in range(1, num_classes + 1, 1):
@@ -108,8 +110,16 @@ def calculate_mean_ap(predictions, ground_truth, class_names, iou_thresholds=Non
                                                              iou_threshold)
             ap = torch.trapz(precisions, recalls)
             average_precisions.append(ap)
-            class_precisions[class_name_dict[class_id]].append(ap)
+            class_average_precisions[class_name_dict[class_id]].append(ap)
+            ps[class_name_dict[class_id]].append(precisions[-1])
+            rs[class_name_dict[class_id]].append(recalls[-1])
         mean_average_precisions.append(sum(average_precisions) / len(average_precisions))
-    for key in class_precisions.keys():
-        class_precisions[key] = sum(class_precisions[key]) / len(class_precisions[key])
-    return sum(mean_average_precisions) / len(mean_average_precisions), class_precisions
+
+    for key in class_average_precisions.keys():
+        class_average_precisions[key] = sum(class_average_precisions[key]) / len(class_average_precisions[key])
+    for key in ps.keys():
+        ps[key] = sum(ps[key]) / len(ps[key])
+    for key in rs.keys():
+        rs[key] = sum(rs[key]) / len(rs[key])
+
+    return sum(mean_average_precisions) / len(mean_average_precisions), class_average_precisions, ps, rs
